@@ -320,7 +320,7 @@ export const LeftSidebar: React.FC = () => {
                     step={1}
                     min={0}
                     max={300}
-                    value={room.collisionWarningDurationSec ?? 5}
+                    value={room.collisionWarningDurationSec ?? 2}
                     onChange={(val) =>
                       updateRoomConfig({ collisionWarningDurationSec: val })
                     }

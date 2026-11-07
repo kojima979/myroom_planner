@@ -8,7 +8,7 @@ import { FurnitureItem } from '../../types/room';
 import { PresetGeometryRenderer } from './PresetGeometries';
 
 /** 干渉警告ポップアップのデフォルト表示秒数（秒） */
-export const DEFAULT_COLLISION_WARNING_DURATION_SEC = 5;
+export const DEFAULT_COLLISION_WARNING_DURATION_SEC = 2;
 
 const SingleFurnitureNode: React.FC<{
   item: FurnitureItem;
@@ -28,7 +28,7 @@ const SingleFurnitureNode: React.FC<{
 
   const [showWarningPopup, setShowWarningPopup] = useState<boolean>(false);
 
-  // 干渉発生時にポップアップを表示し、warningDurationSec秒（デフォルト5秒）後に自動で消去する
+  // 干渉発生時にポップアップを表示し、warningDurationSec秒（デフォルト2秒）後に自動で消去する
   useEffect(() => {
     if (!isColliding || warningDurationSec <= 0) {
       setShowWarningPopup(false);
