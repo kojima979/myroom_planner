@@ -54,6 +54,8 @@ export const RoomConfigSchema = z.object({
   enableRightAngleSnap: z.boolean(),
   /** 直角（∟ 90°）マーク表示のON/OFFフラグ */
   showRightAngleMarks: z.boolean().optional().default(false),
+  /** 壁一辺および壁クリアランス寸法ラベル表示のON/OFFフラグ */
+  showDimensionLabels: z.boolean().optional().default(true),
   /** 壁の表示モード（半透明自動/常時表示/非表示） */
   wallVisibility: z.enum(['auto', 'visible', 'hidden']).optional().default('auto'),
 });

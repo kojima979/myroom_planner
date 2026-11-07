@@ -14,6 +14,7 @@ const WallSegmentMesh: React.FC<{
   wallVisibility: 'auto' | 'visible' | 'hidden';
   isRoomEditMode: boolean;
   showRightAngleMarks: boolean;
+  showDimensionLabels: boolean;
   onFloorOrWallPointerMove: (e: ThreeEvent<PointerEvent>) => void;
   onFloorOrWallClick: (e: ThreeEvent<MouseEvent>) => void;
 }> = ({
@@ -24,6 +25,7 @@ const WallSegmentMesh: React.FC<{
   wallVisibility,
   isRoomEditMode,
   showRightAngleMarks,
+  showDimensionLabels,
   onFloorOrWallPointerMove,
   onFloorOrWallClick,
 }) => {
@@ -106,20 +108,22 @@ const WallSegmentMesh: React.FC<{
       />
 
       {/* 一辺の壁の寸法ラベル（常時表示・マウスイベント完全透過で頂点操作を邪魔しない） */}
-      <Html
-        position={[labelX, labelY, labelZ]}
-        center
-        zIndexRange={[10, 0]}
-        style={{ pointerEvents: 'none' }}
-      >
-        <div className="pointer-events-none select-none px-2 py-0.5 rounded-full text-xs font-semibold shadow-md border whitespace-nowrap flex items-center gap-1 bg-slate-900/85 text-slate-100 border-slate-600/80">
-          <span className="opacity-75 text-[10px]">壁{segment.index + 1}:</span>
-          <span>{segment.lengthMm.toLocaleString()} mm</span>
-          <span className="text-[10px] opacity-80">
-            ({(segment.lengthMm / 10).toFixed(1)} cm)
-          </span>
-        </div>
-      </Html>
+      {showDimensionLabels && (
+        <Html
+          position={[labelX, labelY, labelZ]}
+          center
+          zIndexRange={[10, 0]}
+          style={{ pointerEvents: 'none' }}
+        >
+          <div className="pointer-events-none select-none px-2 py-0.5 rounded-full text-xs font-semibold shadow-md border whitespace-nowrap flex items-center gap-1 bg-slate-900/85 text-slate-100 border-slate-600/80">
+            <span className="opacity-75 text-[10px]">壁{segment.index + 1}:</span>
+            <span>{segment.lengthMm.toLocaleString()} mm</span>
+            <span className="text-[10px] opacity-80">
+              ({(segment.lengthMm / 10).toFixed(1)} cm)
+            </span>
+          </div>
+        </Html>
+      )}
     </group>
   );
 };
@@ -132,6 +136,7 @@ export const RoomMesh: React.FC = () => {
   const setHoverMeasurementPoint = useRoomStore((s) => s.setHoverMeasurementPoint);
 
   const showRightAngleMarks = room.showRightAngleMarks ?? false;
+  const showDimensionLabels = room.showDimensionLabels ?? true;
 
   const wallSegments = useMemo(
     () => computeWallSegments(room.vertices),
@@ -278,6 +283,7 @@ export const RoomMesh: React.FC = () => {
           wallVisibility={room.wallVisibility ?? 'auto'}
           isRoomEditMode={editorMode === 'room_edit'}
           showRightAngleMarks={showRightAngleMarks}
+          showDimensionLabels={showDimensionLabels}
           onFloorOrWallPointerMove={handlePointerMove}
           onFloorOrWallClick={handleClick}
         />

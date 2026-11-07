@@ -8,6 +8,7 @@ import { computeWallClearances } from '../../utils/geometry';
  */
 export const WallClearanceGuides: React.FC = () => {
   const roomVertices = useRoomStore((s) => s.room.vertices);
+  const showDimensionLabels = useRoomStore((s) => s.room.showDimensionLabels ?? true);
   const furnitures = useRoomStore((s) => s.furnitures);
   const selectedFurnitureId = useRoomStore((s) => s.selectedFurnitureId);
   const editorMode = useRoomStore((s) => s.editorMode);
@@ -18,9 +19,9 @@ export const WallClearanceGuides: React.FC = () => {
   );
 
   const clearances = useMemo(() => {
-    if (!selectedItem || editorMode !== 'furniture') return [];
+    if (!selectedItem || editorMode !== 'furniture' || !showDimensionLabels) return [];
     return computeWallClearances(selectedItem, roomVertices);
-  }, [selectedItem, roomVertices, editorMode]);
+  }, [selectedItem, roomVertices, editorMode, showDimensionLabels]);
 
   if (!selectedItem || clearances.length === 0) {
     return null;

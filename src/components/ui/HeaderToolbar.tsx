@@ -28,6 +28,7 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
   const setGizmoMode = useRoomStore((s) => s.setGizmoMode);
   const wallVisibility = useRoomStore((s) => s.room.wallVisibility ?? 'auto');
   const showRightAngleMarks = useRoomStore((s) => s.room.showRightAngleMarks ?? false);
+  const showDimensionLabels = useRoomStore((s) => s.room.showDimensionLabels ?? true);
   const updateRoomConfig = useRoomStore((s) => s.updateRoomConfig);
   const getProjectData = useRoomStore((s) => s.getProjectData);
   const loadProjectData = useRoomStore((s) => s.loadProjectData);
@@ -148,6 +149,21 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
         >
           <CornerDownRight className="w-3.5 h-3.5" />
           直角表示: {showRightAngleMarks ? 'ON' : 'OFF'}
+        </button>
+
+        {/* 寸法表示 ON/OFFトグルボタン */}
+        <button
+          type="button"
+          onClick={() => updateRoomConfig({ showDimensionLabels: !showDimensionLabels })}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+            showDimensionLabels
+              ? 'bg-cyan-700/90 border-cyan-400 text-white'
+              : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+          }`}
+          title="壁一辺および壁までの距離ラベル表示のON/OFFを切り替えます"
+        >
+          <Ruler className="w-3.5 h-3.5" />
+          寸法表示: {showDimensionLabels ? 'ON' : 'OFF'}
         </button>
 
         {/* 3D / 2D視点切替 */}

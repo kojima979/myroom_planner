@@ -29,6 +29,7 @@ const INITIAL_ROOM: RoomConfig = {
   wallColor: '#f8fafc',
   enableRightAngleSnap: true,
   showRightAngleMarks: false,
+  showDimensionLabels: true,
   wallVisibility: 'auto',
 };
 
