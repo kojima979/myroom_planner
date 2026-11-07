@@ -14,75 +14,101 @@ body,
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* 印刷専用スタイル */
+/* ============================================================
+   ブラウザ印刷 (window.print() / PDF出力) 専用スタイル
+   ============================================================ */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 12mm 10mm;
   }
 
+  /* HTML・BODYの高さ固定やスクロール抑制を完全解除 */
+  html,
   body {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
     background-color: #ffffff !important;
     color: #0f172a !important;
-    overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* 画面全体のアプリレイアウトや3Dキャンバスを非表示 */
+  /* 画面全体のアプリレイアウト・ツールバー・キャンバスを完全に非表示 */
   header,
   aside,
   main,
   #root > div > header,
-  #root > div > div > aside,
-  #root > div > div > main {
+  #root > div > div:not(.print-modal-container) {
     display: none !important;
   }
 
-  /* 印刷プレビューモーダルの固定配置や暗色背景を解除 */
-  .fixed.inset-0 {
+  /* モーダルの背景オーバーレイや固定位置を解除 */
+  .print-modal-backdrop {
     position: static !important;
-    background: none !important;
-    padding: 0 !important;
-    overflow: visible !important;
-  }
-
-  .fixed.inset-0 > div {
-    max-width: 100% !important;
-    max-height: none !important;
-    border: none !important;
+    width: 100% !important;
+    height: auto !important;
     background: transparent !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-  }
-
-  .fixed.inset-0 > div > div:first-child {
-    display: none !important;
-  }
-
-  .fixed.inset-0 > div > div.flex-1 {
     padding: 0 !important;
-    background: transparent !important;
+    margin: 0 !important;
     overflow: visible !important;
+    display: block !important;
   }
 
-  #print-section {
-    box-shadow: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 auto !important;
+  .print-modal-window {
+    position: static !important;
     width: 100% !important;
     max-width: 100% !important;
-    background-color: #ffffff !important;
+    height: auto !important;
+    max-height: none !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    overflow: visible !important;
   }
 
-  /* テーブルの改ページ制御 */
+  /* モーダルヘッダー（閉じるボタンや印刷ボタン）を印刷紙面から除外 */
+  .print-modal-header {
+    display: none !important;
+  }
+
+  .print-modal-body {
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  /* 印刷対象エリア（紙面いっぱいに展開） */
+  #print-section {
+    position: relative !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background-color: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* 1ページ目（図面）の後に必要に応じて綺麗に改ページ */
+  .print-page-break {
+    page-break-after: always !important;
+    break-after: page !important;
+  }
+
+  /* テーブルの改ページ時またぎ制御 */
   table {
-    page-break-inside: auto;
+    width: 100% !important;
+    page-break-inside: auto !important;
   }
 
   tr {
-    page-break-inside: avoid;
-    page-break-after: auto;
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
   }
 }
