@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Html, Line } from '@react-three/drei';
 import { useRoomStore } from '../../store/useRoomStore';
-import { distance3D } from '../../utils/geometry';
+import { distance3D, snapMeasurementPoint } from '../../utils/geometry';
 
 export const MeasurementLayer: React.FC = () => {
   const measurements = useRoomStore((s) => s.measurements);
@@ -9,9 +9,19 @@ export const MeasurementLayer: React.FC = () => {
   const hoverPoint = useRoomStore((s) => s.hoverMeasurementPoint);
   const removeMeasurement = useRoomStore((s) => s.removeMeasurement);
   const editorMode = useRoomStore((s) => s.editorMode);
+  const roomVertices = useRoomStore((s) => s.room.vertices);
+  const furnitures = useRoomStore((s) => s.furnitures);
+
+  // マウスホバー地点の家具・壁角へのスナップ判定
+  const snappedHover = useMemo(() => {
+    if (!hoverPoint || editorMode !== 'measure') return null;
+    return snapMeasurementPoint(hoverPoint, roomVertices, furnitures);
+  }, [hoverPoint, editorMode, roomVertices, furnitures]);
+
+  const activeEnd = snappedHover?.point ?? hoverPoint;
 
   const previewDistance =
-    pendingStart && hoverPoint ? distance3D(pendingStart, hoverPoint) : 0;
+    pendingStart && activeEnd ? distance3D(pendingStart, activeEnd) : 0;
 
   return (
     <group>
@@ -36,11 +46,11 @@ export const MeasurementLayer: React.FC = () => {
               lineWidth={3}
             />
             <mesh position={[m.startPoint.x, m.startPoint.y + 4, m.startPoint.z]}>
-              <sphereGeometry args={[28, 16, 16]} />
+              <sphereGeometry args={[26, 16, 16]} />
               <meshBasicMaterial color="#f43f5e" />
             </mesh>
             <mesh position={[m.endPoint.x, m.endPoint.y + 4, m.endPoint.z]}>
-              <sphereGeometry args={[28, 16, 16]} />
+              <sphereGeometry args={[26, 16, 16]} />
               <meshBasicMaterial color="#f43f5e" />
             </mesh>
 
@@ -72,20 +82,41 @@ export const MeasurementLayer: React.FC = () => {
         );
       })}
 
-      {/* 測定モード中のリアルタイムプレビューライン */}
-      {editorMode === 'measure' && pendingStart && (
+      {/* 測定モード中のリアルタイムプレビュー＆スナップリング */}
+      {editorMode === 'measure' && (
         <group>
-          <mesh position={[pendingStart.x, pendingStart.y + 5, pendingStart.z]}>
-            <sphereGeometry args={[32, 16, 16]} />
-            <meshBasicMaterial color="#fbbf24" />
-          </mesh>
+          {/* スナップ時のターゲットリング表示 */}
+          {snappedHover?.isSnapped && activeEnd && (
+            <group position={[activeEnd.x, activeEnd.y + 6, activeEnd.z]}>
+              <mesh rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[35, 55, 32]} />
+                <meshBasicMaterial color="#10b981" side={2} />
+              </mesh>
+              {snappedHover.snapLabel && (
+                <Html position={[0, 45, 0]} center zIndexRange={[55, 0]}>
+                  <div className="pointer-events-none select-none bg-emerald-500 text-slate-950 font-bold text-[10px] px-1.5 py-0.5 rounded shadow">
+                    🧲 {snappedHover.snapLabel}にスナップ
+                  </div>
+                </Html>
+              )}
+            </group>
+          )}
 
-          {hoverPoint && (
+          {/* 始点マーカー */}
+          {pendingStart && (
+            <mesh position={[pendingStart.x, pendingStart.y + 5, pendingStart.z]}>
+              <sphereGeometry args={[30, 16, 16]} />
+              <meshBasicMaterial color="#fbbf24" />
+            </mesh>
+          )}
+
+          {/* プレビュー測定線 */}
+          {pendingStart && activeEnd && (
             <>
               <Line
                 points={[
                   [pendingStart.x, pendingStart.y + 5, pendingStart.z],
-                  [hoverPoint.x, hoverPoint.y + 5, hoverPoint.z],
+                  [activeEnd.x, activeEnd.y + 5, activeEnd.z],
                 ]}
                 color="#fbbf24"
                 lineWidth={2.5}
@@ -93,15 +124,15 @@ export const MeasurementLayer: React.FC = () => {
                 dashSize={50}
                 gapSize={30}
               />
-              <mesh position={[hoverPoint.x, hoverPoint.y + 5, hoverPoint.z]}>
+              <mesh position={[activeEnd.x, activeEnd.y + 5, activeEnd.z]}>
                 <sphereGeometry args={[26, 16, 16]} />
                 <meshBasicMaterial color="#fbbf24" />
               </mesh>
               <Html
                 position={[
-                  (pendingStart.x + hoverPoint.x) / 2,
-                  (pendingStart.y + hoverPoint.y) / 2 + 70,
-                  (pendingStart.z + hoverPoint.z) / 2,
+                  (pendingStart.x + activeEnd.x) / 2,
+                  (pendingStart.y + activeEnd.y) / 2 + 70,
+                  (pendingStart.z + activeEnd.z) / 2,
                 ]}
                 center
                 zIndexRange={[50, 0]}

@@ -159,7 +159,6 @@ export function snapVertexPosition(
     const pdz = prev.z - prevPrev.z;
     const plen = Math.hypot(pdx, pdz);
     if (plen > 1e-3) {
-      // prevを通る法線方向ベクトル
       const nx = -pdz / plen;
       const nz = pdx / plen;
       const vx = x - prev.x;
@@ -254,7 +253,6 @@ export function computeWallClearances(
   const halfD = item.dimensions.depth / 2;
   const displayY = Math.max(20, item.position.y + Math.min(item.dimensions.height / 2, 400));
 
-  // ローカル座標系における4方向（前:+Z, 後:-Z, 右:+X, 左:-X）
   const directions: Array<{
     direction: ClearanceDirection;
     label: string;
@@ -290,7 +288,6 @@ export function computeWallClearances(
   const results: ClearanceDistance[] = [];
 
   for (const d of directions) {
-    // Three.jsのY軸回転: worldX = x * cosY + z * sinY, worldZ = -x * sinY + z * cosY
     const worldOffsetX = d.localOffset.x * cosY + d.localOffset.z * sinY;
     const worldOffsetZ = -d.localOffset.x * sinY + d.localOffset.z * cosY;
 
@@ -357,6 +354,88 @@ export function getFurnitureFootprintCorners(item: FurnitureItem): Vector2D[] {
 }
 
 /**
+ * 家具の3D頂点（8コーナー＋各面の中点）を取得する（測定時のスナップ用）
+ */
+export function getFurnitureSnapPoints(item: FurnitureItem): Vector3D[] {
+  const radY = (item.rotation.y * Math.PI) / 180;
+  const cosY = Math.cos(radY);
+  const sinY = Math.sin(radY);
+  const hw = item.dimensions.width / 2;
+  const hd = item.dimensions.depth / 2;
+  const minY = item.position.y;
+  const maxY = item.position.y + item.dimensions.height;
+
+  const localXz = [
+    { x: -hw, z: -hd },
+    { x: hw, z: -hd },
+    { x: hw, z: hd },
+    { x: -hw, z: hd },
+    { x: 0, z: -hd },
+    { x: 0, z: hd },
+    { x: -hw, z: 0 },
+    { x: hw, z: 0 },
+  ];
+
+  const points: Vector3D[] = [];
+  for (const y of [minY, maxY]) {
+    for (const xz of localXz) {
+      points.push({
+        x: Math.round(item.position.x + xz.x * cosY + xz.z * sinY),
+        y: Math.round(y),
+        z: Math.round(item.position.z - xz.x * sinY + xz.z * cosY),
+      });
+    }
+  }
+  return points;
+}
+
+/**
+ * 測定モード時に、マウス近傍（閾値以内）の家具角や部屋の角頂点にスナップさせる
+ */
+export function snapMeasurementPoint(
+  targetPoint: Vector3D,
+  roomVertices: Vector2D[],
+  furnitures: FurnitureItem[],
+  thresholdMm = 150
+): { point: Vector3D; isSnapped: boolean; snapLabel?: string } {
+  let closestDist = Infinity;
+  let snappedPoint: Vector3D = targetPoint;
+  let snapLabel: string | undefined = undefined;
+
+  // 1. 部屋の壁コーナー頂点（床面および天井高）
+  for (let i = 0; i < roomVertices.length; i++) {
+    const v = roomVertices[i];
+    for (const y of [0, 2400]) {
+      const d = Math.hypot(targetPoint.x - v.x, targetPoint.y - y, targetPoint.z - v.z);
+      if (d <= thresholdMm && d < closestDist) {
+        closestDist = d;
+        snappedPoint = { x: v.x, y, z: v.z };
+        snapLabel = `部屋の角 #${i + 1}`;
+      }
+    }
+  }
+
+  // 2. 各家具のコーナー頂点
+  for (const f of furnitures) {
+    const fPoints = getFurnitureSnapPoints(f);
+    for (const pt of fPoints) {
+      const d = Math.hypot(targetPoint.x - pt.x, targetPoint.y - pt.y, targetPoint.z - pt.z);
+      if (d <= thresholdMm && d < closestDist) {
+        closestDist = d;
+        snappedPoint = pt;
+        snapLabel = `${f.name}の端`;
+      }
+    }
+  }
+
+  return {
+    point: snappedPoint,
+    isSnapped: closestDist <= thresholdMm,
+    snapLabel,
+  };
+}
+
+/**
  * 分離軸定理 (SAT) による2つの2D凸四角形 (OBB) の重なり判定
  */
 function checkPolygonOverlapSAT(polyA: Vector2D[], polyB: Vector2D[]): boolean {
@@ -366,7 +445,6 @@ function checkPolygonOverlapSAT(polyA: Vector2D[], polyB: Vector2D[]): boolean {
       const p1 = poly[i];
       const p2 = poly[(i + 1) % poly.length];
 
-      // 辺の法線ベクトル（分離軸）
       const axisX = -(p2.z - p1.z);
       const axisZ = p2.x - p1.x;
       const len = Math.hypot(axisX, axisZ);
@@ -390,7 +468,6 @@ function checkPolygonOverlapSAT(polyA: Vector2D[], polyB: Vector2D[]): boolean {
         if (proj > maxB) maxB = proj;
       }
 
-      // 1mmの微小マージンを許容
       if (maxA <= minB + 1 || maxB <= minA + 1) {
         return false;
       }
@@ -442,21 +519,18 @@ export function computeCollidingFurnitureIds(
 ): Set<string> {
   const collidingIds = new Set<string>();
 
-  // 1. 家具同士の3D OBB干渉判定
   for (let i = 0; i < furnitures.length; i++) {
     const a = furnitures[i];
-    if (a.allowOverlap) continue; // カーペット等は干渉しない
+    if (a.allowOverlap) continue;
 
     const cornersA = getFurnitureFootprintCorners(a);
     const minYA = a.position.y;
     const maxYA = a.position.y + a.dimensions.height;
 
-    // 壁からはみ出しているかチェック（窓・扉は壁上に配置できるため除外）
     if (a.presetType !== 'window' && a.presetType !== 'door' && roomVertices.length >= 3) {
       for (const corner of cornersA) {
         const inside = isPointInPolygon(corner, roomVertices);
         if (!inside) {
-          // 壁境界線上（誤差5mm以内）は許容
           let nearWall = false;
           for (let w = 0; w < roomVertices.length; w++) {
             const d = pointToSegmentDistance(
@@ -479,12 +553,11 @@ export function computeCollidingFurnitureIds(
 
     for (let j = i + 1; j < furnitures.length; j++) {
       const b = furnitures[j];
-      if (b.allowOverlap) continue; // カーペット等は干渉しない
+      if (b.allowOverlap) continue;
 
       const minYB = b.position.y;
       const maxYB = b.position.y + b.dimensions.height;
 
-      // Y軸（高さ方向）で重なっているか（上に載せる場合 1mm の許容）
       const yOverlap = maxYA > minYB + 1 && maxYB > minYA + 1;
       if (!yOverlap) continue;
 
