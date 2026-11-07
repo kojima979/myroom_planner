@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { FurnitureItem, MeasurementItem, Vector2D } from '../../types/room';
-import { computeWallClearances, computeWallSegments } from '../../utils/geometry';
+import {
+  computeWallSegments,
+  getFurnitureFootprintCorners,
+} from '../../utils/geometry';
 
 type Props = {
   vertices: Vector2D[];
@@ -9,22 +12,173 @@ type Props = {
   wallThickness: number;
 };
 
+type PlanClearanceLine = {
+  axis: 'horizontal' | 'vertical';
+  fromX: number;
+  fromZ: number;
+  toX: number;
+  toZ: number;
+  distanceMm: number;
+};
+
 /**
- * 各家具について、縦方向1つ（前または後）・横方向1つ（左または右）の最短壁クリアランスを抽出する
+ * 2Dレイ (origin + t * dir, t >= 0) と線分 (segA -> segB) の交点距離を求める
  */
-function getSelectedClearancesForPrint(furniture: FurnitureItem, vertices: Vector2D[]) {
-  const clearances = computeWallClearances(furniture, vertices);
-  // 横方向（left or right）の最短
-  const horizontalList = clearances.filter((c) => c.direction === 'left' || c.direction === 'right');
-  horizontalList.sort((a, b) => a.distanceMm - b.distanceMm);
-  const bestHorizontal = horizontalList[0] ?? null;
+function raycastWall2D(
+  originX: number,
+  originZ: number,
+  dirX: number,
+  dirZ: number,
+  vertices: Vector2D[]
+): { distanceMm: number; hitX: number; hitZ: number } | null {
+  const n = vertices.length;
+  let minT = Infinity;
+  let bestX = originX;
+  let bestZ = originZ;
 
-  // 縦方向（front or back）の最短
-  const verticalList = clearances.filter((c) => c.direction === 'front' || c.direction === 'back');
-  verticalList.sort((a, b) => a.distanceMm - b.distanceMm);
-  const bestVertical = verticalList[0] ?? null;
+  for (let i = 0; i < n; i++) {
+    const a = vertices[i];
+    const b = vertices[(i + 1) % n];
+    const vx = b.x - a.x;
+    const vz = b.z - a.z;
 
-  return { bestHorizontal, bestVertical };
+    const det = dirX * vz - dirZ * vx;
+    if (Math.abs(det) < 1e-7) continue;
+
+    const dx = a.x - originX;
+    const dz = a.z - originZ;
+
+    const t = (dx * vz - dz * vx) / det;
+    const u = (dx * dirZ - dz * dirX) / det;
+
+    if (t >= -1 && u >= -1e-4 && u <= 1 + 1e-4) {
+      const clampedT = Math.max(0, t);
+      if (clampedT < minT) {
+        minT = clampedT;
+        bestX = originX + dirX * clampedT;
+        bestZ = originZ + dirZ * clampedT;
+      }
+    }
+  }
+
+  if (!Number.isFinite(minT)) return null;
+  return {
+    distanceMm: Math.round(minT),
+    hitX: bestX,
+    hitZ: bestZ,
+  };
+}
+
+/**
+ * 各オブジェクトについて、2D平面図上の「横方向（左右の近い方）1つ」と「縦方向（上下の近い方）1つ」の壁面までの寸法を計算する
+ */
+function computeObjectPlanClearances(
+  item: FurnitureItem,
+  vertices: Vector2D[]
+): {
+  horizontal: PlanClearanceLine | null;
+  vertical: PlanClearanceLine | null;
+} {
+  // 窓・扉は壁面自体に配置される建具のため、壁までのクリアランス測定対象から除外
+  if (item.presetType === 'window' || item.presetType === 'door') {
+    return { horizontal: null, vertical: null };
+  }
+
+  const corners = getFurnitureFootprintCorners(item);
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+
+  for (const c of corners) {
+    if (c.x < minX) minX = c.x;
+    if (c.x > maxX) maxX = c.x;
+    if (c.z < minZ) minZ = c.z;
+    if (c.z > maxZ) maxZ = c.z;
+  }
+
+  const centerX = item.position.x;
+  const centerZ = item.position.z;
+
+  // 横方向: 左壁 (-X) と 右壁 (+X) を比較し、近い方1つを採用
+  const hitLeft = raycastWall2D(minX, centerZ, -1, 0, vertices);
+  const hitRight = raycastWall2D(maxX, centerZ, 1, 0, vertices);
+
+  let horizontal: PlanClearanceLine | null = null;
+  if (hitLeft && hitRight) {
+    const pickLeft = hitLeft.distanceMm <= hitRight.distanceMm;
+    const chosen = pickLeft ? hitLeft : hitRight;
+    const startX = pickLeft ? minX : maxX;
+    if (chosen.distanceMm >= 10) {
+      horizontal = {
+        axis: 'horizontal',
+        fromX: startX,
+        fromZ: centerZ,
+        toX: chosen.hitX,
+        toZ: chosen.hitZ,
+        distanceMm: chosen.distanceMm,
+      };
+    }
+  } else if (hitLeft && hitLeft.distanceMm >= 10) {
+    horizontal = {
+      axis: 'horizontal',
+      fromX: minX,
+      fromZ: centerZ,
+      toX: hitLeft.hitX,
+      toZ: hitLeft.hitZ,
+      distanceMm: hitLeft.distanceMm,
+    };
+  } else if (hitRight && hitRight.distanceMm >= 10) {
+    horizontal = {
+      axis: 'horizontal',
+      fromX: maxX,
+      fromZ: centerZ,
+      toX: hitRight.hitX,
+      toZ: hitRight.hitZ,
+      distanceMm: hitRight.distanceMm,
+    };
+  }
+
+  // 縦方向: 上壁 (-Z) と 下壁 (+Z) を比較し、近い方1つを採用
+  const hitTop = raycastWall2D(centerX, minZ, 0, -1, vertices);
+  const hitBottom = raycastWall2D(centerX, maxZ, 0, 1, vertices);
+
+  let vertical: PlanClearanceLine | null = null;
+  if (hitTop && hitBottom) {
+    const pickTop = hitTop.distanceMm <= hitBottom.distanceMm;
+    const chosen = pickTop ? hitTop : hitBottom;
+    const startZ = pickTop ? minZ : maxZ;
+    if (chosen.distanceMm >= 10) {
+      vertical = {
+        axis: 'vertical',
+        fromX: centerX,
+        fromZ: startZ,
+        toX: chosen.hitX,
+        toZ: chosen.hitZ,
+        distanceMm: chosen.distanceMm,
+      };
+    }
+  } else if (hitTop && hitTop.distanceMm >= 10) {
+    vertical = {
+      axis: 'vertical',
+      fromX: centerX,
+      fromZ: minZ,
+      toX: hitTop.hitX,
+      toZ: hitTop.hitZ,
+      distanceMm: hitTop.distanceMm,
+    };
+  } else if (hitBottom && hitBottom.distanceMm >= 10) {
+    vertical = {
+      axis: 'vertical',
+      fromX: centerX,
+      fromZ: maxZ,
+      toX: hitBottom.hitX,
+      toZ: hitBottom.hitZ,
+      distanceMm: hitBottom.distanceMm,
+    };
+  }
+
+  return { horizontal, vertical };
 }
 
 export const PrintFloorPlan2D: React.FC<Props> = ({
@@ -35,176 +189,225 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
 }) => {
   const wallSegments = useMemo(() => computeWallSegments(vertices), [vertices]);
 
-  // 家具ごとの厳選クリアランス（縦1つ、横1つ）
+  // 部屋の基本スパンから図面全体の基準スケール単位 u を算出
+  const { bounds, unit } = useMemo(() => {
+    if (vertices.length === 0) {
+      return {
+        bounds: { minX: -2500, maxX: 2500, minZ: -2000, maxZ: 2000, w: 5000, d: 4000 },
+        unit: 40,
+      };
+    }
+
+    let rMinX = Infinity;
+    let rMaxX = -Infinity;
+    let rMinZ = Infinity;
+    let rMaxZ = -Infinity;
+
+    for (const v of vertices) {
+      if (v.x < rMinX) rMinX = v.x;
+      if (v.x > rMaxX) rMaxX = v.x;
+      if (v.z < rMinZ) rMinZ = v.z;
+      if (v.z > rMaxZ) rMaxZ = v.z;
+    }
+
+    for (const f of furnitures) {
+      const corners = getFurnitureFootprintCorners(f);
+      for (const c of corners) {
+        if (c.x < rMinX) rMinX = c.x;
+        if (c.x > rMaxX) rMaxX = c.x;
+        if (c.z < rMinZ) rMinZ = c.z;
+        if (c.z > rMaxZ) rMaxZ = c.z;
+      }
+    }
+
+    const baseSpan = Math.max(2000, rMaxX - rMinX, rMaxZ - rMinZ);
+    // 基準単位 u: 部屋スパンの 1/35（例: 3600mmの部屋なら u ≈ 103mm）
+    const u = Math.round(baseSpan / 35);
+
+    // 外側の壁寸法線および寸法ラベルが絶対に見切れないマージンを確保
+    const padX = u * 7.5;
+    const padZ = u * 6.5;
+
+    const minX = rMinX - padX;
+    const maxX = rMaxX + padX;
+    const minZ = rMinZ - padZ;
+    const maxZ = rMaxZ + padZ;
+
+    return {
+      bounds: {
+        minX,
+        maxX,
+        minZ,
+        maxZ,
+        w: maxX - minX,
+        d: maxZ - minZ,
+      },
+      unit: u,
+    };
+  }, [vertices, furnitures]);
+
+  // 各家具の壁面までの距離（縦1つ、横1つ）
   const furnitureClearances = useMemo(() => {
     return furnitures.map((f, idx) => ({
       furniture: f,
       index: idx + 1,
-      ...getSelectedClearancesForPrint(f, vertices),
+      ...computeObjectPlanClearances(f, vertices),
     }));
   }, [furnitures, vertices]);
-
-  // 部屋全体のバウンディングボックス計算（寸法線や文字が絶対にはみ出さないよう広めのマージンを確保）
-  const bounds = useMemo(() => {
-    if (vertices.length === 0) {
-      return { minX: -2200, maxX: 2200, minZ: -1800, maxZ: 1800, w: 4400, d: 3600 };
-    }
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minZ = Infinity;
-    let maxZ = -Infinity;
-
-    for (const v of vertices) {
-      if (v.x < minX) minX = v.x;
-      if (v.x > maxX) maxX = v.x;
-      if (v.z < minZ) minZ = v.z;
-      if (v.z > maxZ) maxZ = v.z;
-    }
-
-    // 家具の位置も考慮
-    for (const f of furnitures) {
-      const hw = f.dimensions.width / 2;
-      const hd = f.dimensions.depth / 2;
-      const fMinX = f.position.x - hw;
-      const fMaxX = f.position.x + hw;
-      const fMinZ = f.position.z - hd;
-      const fMaxZ = f.position.z + hd;
-      if (fMinX < minX) minX = fMinX;
-      if (fMaxX > maxX) maxX = fMaxX;
-      if (fMinZ < minZ) minZ = fMinZ;
-      if (fMaxZ > maxZ) maxZ = fMaxZ;
-    }
-
-    // 外側の寸法線と文字バッジのための十分な余白 (850mm)
-    const margin = 850;
-    const w = maxX - minX + margin * 2;
-    const d = maxZ - minZ + margin * 2;
-
-    return {
-      minX: minX - margin,
-      maxX: maxX + margin,
-      minZ: minZ - margin,
-      maxZ: maxZ + margin,
-      w: Math.max(1200, w),
-      d: Math.max(1200, d),
-    };
-  }, [vertices, furnitures]);
 
   const roomPolygonPoints = useMemo(() => {
     return vertices.map((v) => `${v.x},${v.z}`).join(' ');
   }, [vertices]);
 
+  // フォントおよびバッジのサイズ定義（unit基準なので部屋サイズに関わらず常に大きくクッキリ表示される）
+  const wallDimFontSize = Math.round(unit * 1.15);
+  const wallDimBoxW = Math.round(unit * 5.8);
+  const wallDimBoxH = Math.round(unit * 1.75);
+  const wallDimOffset = Math.round(unit * 3.4);
+
+  const clearanceFontSize = Math.round(unit * 0.92);
+  const clearanceBoxW = Math.round(unit * 4.2);
+  const clearanceBoxH = Math.round(unit * 1.4);
+
+  const badgeRadius = Math.round(unit * 0.85);
+  const badgeFontSize = Math.round(unit * 1.0);
+  const furnitureNameFontSize = Math.round(unit * 0.85);
+
   return (
-    <div className="w-full flex flex-col items-center justify-center bg-white border border-slate-300 rounded p-4 overflow-hidden">
+    <div className="print-svg-wrapper w-full bg-white border border-slate-300 rounded p-2">
       <svg
         viewBox={`${bounds.minX} ${bounds.minZ} ${bounds.w} ${bounds.d}`}
-        className="w-full h-auto max-h-[580px] select-none block"
+        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-[380px] print:h-[122mm] select-none block mx-auto"
         style={{ backgroundColor: '#ffffff' }}
       >
         <defs>
-          {/* 寸法線の矢印マーカー */}
+          {/* 壁寸法線の矢印マーカー */}
           <marker
-            id="dim-arrow-black"
+            id="dim-arrow-start"
             viewBox="0 0 10 10"
             refX="5"
             refY="5"
-            markerWidth="7"
-            markerHeight="7"
-            orient="auto"
+            markerWidth="5"
+            markerHeight="5"
+            orient="auto-start-reverse"
           >
             <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0f172a" />
           </marker>
           <marker
-            id="clearance-arrow"
+            id="dim-arrow-end"
             viewBox="0 0 10 10"
             refX="5"
             refY="5"
-            markerWidth="6"
-            markerHeight="6"
+            markerWidth="5"
+            markerHeight="5"
             orient="auto"
           >
-            <path d="M 0 2 L 8 5 L 0 8 z" fill="#0284c7" />
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0f172a" />
           </marker>
+          {/* オブジェクト〜壁間クリアランス矢印マーカー */}
+          <marker
+            id="clearance-arrow-start"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerWidth="4.5"
+            markerHeight="4.5"
+            orient="auto-start-reverse"
+          >
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0369a1" />
+          </marker>
+          <marker
+            id="clearance-arrow-end"
+            viewBox="0 0 10 10"
+            refX="5"
+            refY="5"
+            markerWidth="4.5"
+            markerHeight="4.5"
+            orient="auto"
+          >
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#0369a1" />
+          </marker>
+          {/* 任意測定ライン矢印 */}
           <marker
             id="measure-arrow"
             viewBox="0 0 10 10"
             refX="5"
             refY="5"
-            markerWidth="6"
-            markerHeight="6"
+            markerWidth="5"
+            markerHeight="5"
             orient="auto"
           >
-            <path d="M 0 2 L 8 5 L 0 8 z" fill="#e11d48" />
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill="#be123c" />
           </marker>
         </defs>
 
-        {/* 1. 床面塗りつぶしと壁の輪郭 */}
+        {/* 1. 床面と部屋外壁の輪郭 */}
         <polygon
           points={roomPolygonPoints}
           fill="#f8fafc"
           stroke="#0f172a"
-          strokeWidth={Math.max(16, wallThickness * 0.45)}
+          strokeWidth={Math.max(unit * 0.35, wallThickness * 0.4)}
           strokeLinejoin="round"
         />
 
-        {/* 2. 各壁セグメントの一辺寸法線（大きくクッキリした文字） */}
+        {/* 2. 各壁一辺の寸法線（外側・大文字表記） */}
         {wallSegments.map((seg) => {
-          const offsetDist = 320;
-          const sx = seg.start.x - seg.normal.x * offsetDist;
-          const sz = seg.start.z - seg.normal.z * offsetDist;
-          const ex = seg.end.x - seg.normal.x * offsetDist;
-          const ez = seg.end.z - seg.normal.z * offsetDist;
+          const sx = seg.start.x - seg.normal.x * wallDimOffset;
+          const sz = seg.start.z - seg.normal.z * wallDimOffset;
+          const ex = seg.end.x - seg.normal.x * wallDimOffset;
+          const ez = seg.end.z - seg.normal.z * wallDimOffset;
           const mx = (sx + ex) / 2;
           const mz = (sz + ez) / 2;
 
           return (
-            <g key={`dim-${seg.index}`}>
-              {/* 引出線 */}
+            <g key={`wall-dim-${seg.index}`}>
+              {/* 壁端点からの補助引出線 */}
               <line
                 x1={seg.start.x}
                 y1={seg.start.z}
                 x2={sx}
                 y2={sz}
-                stroke="#64748b"
-                strokeWidth="2"
-                strokeDasharray="6,4"
+                stroke="#475569"
+                strokeWidth={unit * 0.08}
+                strokeDasharray={`${unit * 0.3},${unit * 0.2}`}
               />
               <line
                 x1={seg.end.x}
                 y1={seg.end.z}
                 x2={ex}
                 y2={ez}
-                stroke="#64748b"
-                strokeWidth="2"
-                strokeDasharray="6,4"
+                stroke="#475569"
+                strokeWidth={unit * 0.08}
+                strokeDasharray={`${unit * 0.3},${unit * 0.2}`}
               />
-              {/* 寸法矢印線 */}
+              {/* 寸法主線 */}
               <line
                 x1={sx}
                 y1={sz}
                 x2={ex}
                 y2={ez}
                 stroke="#0f172a"
-                strokeWidth="3.5"
-                markerStart="url(#dim-arrow-black)"
-                markerEnd="url(#dim-arrow-black)"
+                strokeWidth={unit * 0.14}
+                markerStart="url(#dim-arrow-start)"
+                markerEnd="url(#dim-arrow-end)"
               />
-              {/* 大きく見やすい寸法数値バッジ */}
+              {/* 寸法数値ボックス */}
               <rect
-                x={mx - 90}
-                y={mz - 28}
-                width="180"
-                height="56"
+                x={mx - wallDimBoxW / 2}
+                y={mz - wallDimBoxH / 2}
+                width={wallDimBoxW}
+                height={wallDimBoxH}
                 fill="#ffffff"
                 stroke="#0f172a"
-                strokeWidth="2"
-                rx="6"
+                strokeWidth={unit * 0.09}
+                rx={unit * 0.2}
               />
               <text
                 x={mx}
-                y={mz + 9}
+                y={mz + wallDimFontSize * 0.36}
                 fill="#0f172a"
-                fontSize="32"
+                fontSize={wallDimFontSize}
                 fontWeight="bold"
                 textAnchor="middle"
                 fontFamily="sans-serif"
@@ -215,47 +418,100 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           );
         })}
 
-        {/* 3. 家具と壁面までの寸法（縦方向1つ、横方向1つに限定） */}
-        {furnitureClearances.map(({ furniture, bestHorizontal, bestVertical }) => {
-          const lines = [bestHorizontal, bestVertical].filter(Boolean);
+        {/* 3. 家具・建具の平面フットプリント（回転は図形のみに適用） */}
+        {furnitures.map((f) => {
+          const hw = f.dimensions.width / 2;
+          const hd = f.dimensions.depth / 2;
+          const isCarpet = f.presetType === 'carpet';
+          const isDoor = f.presetType === 'door';
+          const isWindow = f.presetType === 'window';
+
+          const transform = `translate(${f.position.x}, ${f.position.z}) rotate(${f.rotation.y})`;
+
+          return (
+            <g key={`shape-${f.id}`} transform={transform}>
+              <rect
+                x={-hw}
+                y={-hd}
+                width={f.dimensions.width}
+                height={f.dimensions.depth}
+                fill={isCarpet ? '#f5f3ff' : '#ffffff'}
+                stroke={isCarpet ? '#7c3aed' : '#0f172a'}
+                strokeWidth={isCarpet ? unit * 0.1 : unit * 0.16}
+                strokeDasharray={isCarpet ? `${unit * 0.4},${unit * 0.25}` : undefined}
+                rx={unit * 0.12}
+              />
+
+              {/* 扉の開閉軌跡 */}
+              {isDoor && (
+                <path
+                  d={`M ${-hw} ${hd} A ${f.dimensions.width * 0.9} ${
+                    f.dimensions.width * 0.9
+                  } 0 0 0 ${-hw + f.dimensions.width * 0.9} ${
+                    hd - f.dimensions.width * 0.9
+                  }`}
+                  fill="none"
+                  stroke="#b45309"
+                  strokeWidth={unit * 0.1}
+                  strokeDasharray={`${unit * 0.35},${unit * 0.25}`}
+                />
+              )}
+
+              {/* 窓のサッシ二重線 */}
+              {isWindow && (
+                <line
+                  x1={-hw}
+                  y1={0}
+                  x2={hw}
+                  y2={0}
+                  stroke="#0284c7"
+                  strokeWidth={unit * 0.12}
+                />
+              )}
+            </g>
+          );
+        })}
+
+        {/* 4. 各オブジェクトと壁面までの寸法（1オブジェクトにつき縦方向1つ・横方向1つに限定） */}
+        {furnitureClearances.map(({ furniture, horizontal, vertical }) => {
+          const lines = [horizontal, vertical].filter(
+            (c): c is PlanClearanceLine => c !== null
+          );
 
           return (
             <g key={`clearance-${furniture.id}`}>
-              {lines.map((c, i) => {
-                if (!c) return null;
-                const midX = (c.fromPoint.x + c.toWallPoint.x) / 2;
-                const midZ = (c.fromPoint.z + c.toWallPoint.z) / 2;
+              {lines.map((c) => {
+                const midX = (c.fromX + c.toX) / 2;
+                const midZ = (c.fromZ + c.toZ) / 2;
 
                 return (
-                  <g key={i}>
-                    {/* クリアランス寸法線 */}
+                  <g key={`${furniture.id}-${c.axis}`}>
                     <line
-                      x1={c.fromPoint.x}
-                      y1={c.fromPoint.z}
-                      x2={c.toWallPoint.x}
-                      y2={c.toWallPoint.z}
-                      stroke="#0284c7"
-                      strokeWidth="2.5"
-                      strokeDasharray="8,5"
-                      markerEnd="url(#clearance-arrow)"
+                      x1={c.fromX}
+                      y1={c.fromZ}
+                      x2={c.toX}
+                      y2={c.toZ}
+                      stroke="#0369a1"
+                      strokeWidth={unit * 0.11}
+                      strokeDasharray={`${unit * 0.3},${unit * 0.2}`}
+                      markerStart="url(#clearance-arrow-start)"
+                      markerEnd="url(#clearance-arrow-end)"
                     />
-                    <circle cx={c.fromPoint.x} cy={c.fromPoint.z} r="6" fill="#0284c7" />
-                    {/* 寸法バッジ */}
                     <rect
-                      x={midX - 55}
-                      y={midZ - 18}
-                      width="110"
-                      height="36"
+                      x={midX - clearanceBoxW / 2}
+                      y={midZ - clearanceBoxH / 2}
+                      width={clearanceBoxW}
+                      height={clearanceBoxH}
                       fill="#f0f9ff"
-                      stroke="#0284c7"
-                      strokeWidth="1.5"
-                      rx="4"
+                      stroke="#0369a1"
+                      strokeWidth={unit * 0.07}
+                      rx={unit * 0.15}
                     />
                     <text
                       x={midX}
-                      y={midZ + 6}
-                      fill="#0369a1"
-                      fontSize="20"
+                      y={midZ + clearanceFontSize * 0.36}
+                      fill="#0c4a6e"
+                      fontSize={clearanceFontSize}
                       fontWeight="bold"
                       textAnchor="middle"
                       fontFamily="sans-serif"
@@ -269,63 +525,28 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           );
         })}
 
-        {/* 4. 家具・建具本体の平面形状 */}
+        {/* 5. 家具の識別番号バッジと名称（回転させず常に水平・正立で描画） */}
         {furnitures.map((f, idx) => {
-          const hw = f.dimensions.width / 2;
-          const hd = f.dimensions.depth / 2;
-          const isCarpet = f.presetType === 'carpet';
-          const isDoor = f.presetType === 'door';
-          const isWindow = f.presetType === 'window';
-
-          const transform = `translate(${f.position.x}, ${f.position.z}) rotate(${f.rotation.y})`;
+          const cx = f.position.x;
+          const cz = f.position.z;
+          const isFixture = f.presetType === 'window' || f.presetType === 'door';
 
           return (
-            <g key={f.id} transform={transform}>
-              {/* 家具本体 */}
-              <rect
-                x={-hw}
-                y={-hd}
-                width={f.dimensions.width}
-                height={f.dimensions.depth}
-                fill={isCarpet ? '#f3e8ff' : '#ffffff'}
-                stroke={isCarpet ? '#9333ea' : '#0f172a'}
-                strokeWidth={isCarpet ? '2.5' : '3.5'}
-                strokeDasharray={isCarpet ? '10,5' : undefined}
-                rx={isCarpet ? '6' : '3'}
+            <g key={`label-${f.id}`}>
+              {/* 番号バッジ */}
+              <circle
+                cx={cx}
+                cy={cz - (isFixture ? 0 : badgeRadius * 0.45)}
+                r={badgeRadius}
+                fill="#0f172a"
+                stroke="#ffffff"
+                strokeWidth={unit * 0.08}
               />
-
-              {/* 扉の開閉軌跡 */}
-              {isDoor && (
-                <path
-                  d={`M ${-hw} ${hd} A ${f.dimensions.width * 0.9} ${
-                    f.dimensions.width * 0.9
-                  } 0 0 0 ${-hw + f.dimensions.width * 0.9} ${hd - f.dimensions.width * 0.9}`}
-                  fill="none"
-                  stroke="#d97706"
-                  strokeWidth="2.5"
-                  strokeDasharray="8,5"
-                />
-              )}
-
-              {/* 窓のサッシ二重線 */}
-              {isWindow && (
-                <line
-                  x1={-hw}
-                  y1={0}
-                  x2={hw}
-                  y2={0}
-                  stroke="#0284c7"
-                  strokeWidth="3"
-                />
-              )}
-
-              {/* 識別番号バッジ（円を大きく、フォントを強調） */}
-              <circle cx="0" cy="0" r="50" fill="#0f172a" />
               <text
-                x="0"
-                y="12"
+                x={cx}
+                y={cz - (isFixture ? 0 : badgeRadius * 0.45) + badgeFontSize * 0.36}
                 fill="#ffffff"
-                fontSize="32"
+                fontSize={badgeFontSize}
                 fontWeight="bold"
                 textAnchor="middle"
                 fontFamily="sans-serif"
@@ -333,26 +554,33 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                 {idx + 1}
               </text>
 
-              {/* 家具名 */}
-              <text
-                x="0"
-                y={hd - 16}
-                fill="#0f172a"
-                fontSize="24"
-                fontWeight="bold"
-                textAnchor="middle"
-                fontFamily="sans-serif"
-              >
-                {f.name}
-              </text>
+              {/* 家具名称（白縁取り付きで線と重なってもクッキリ読める） */}
+              {!isFixture && (
+                <text
+                  x={cx}
+                  y={cz + badgeRadius * 0.95}
+                  fill="#0f172a"
+                  stroke="#ffffff"
+                  strokeWidth={unit * 0.22}
+                  paintOrder="stroke"
+                  fontSize={furnitureNameFontSize}
+                  fontWeight="bold"
+                  textAnchor="middle"
+                  fontFamily="sans-serif"
+                >
+                  {f.name}
+                </text>
+              )}
             </g>
           );
         })}
 
-        {/* 5. 任意の長さ測定ライン */}
+        {/* 6. 任意の2点間測定ライン */}
         {measurements.map((m, idx) => {
           const mx = (m.startPoint.x + m.endPoint.x) / 2;
           const mz = (m.startPoint.z + m.endPoint.z) / 2;
+          const mBoxW = Math.round(unit * 5.2);
+          const mBoxH = Math.round(unit * 1.5);
 
           return (
             <g key={m.id}>
@@ -361,28 +589,38 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                 y1={m.startPoint.z}
                 x2={m.endPoint.x}
                 y2={m.endPoint.z}
-                stroke="#e11d48"
-                strokeWidth="4"
-                strokeDasharray="8,5"
+                stroke="#be123c"
+                strokeWidth={unit * 0.13}
+                strokeDasharray={`${unit * 0.35},${unit * 0.2}`}
                 markerEnd="url(#measure-arrow)"
               />
-              <circle cx={m.startPoint.x} cy={m.startPoint.z} r="10" fill="#e11d48" />
-              <circle cx={m.endPoint.x} cy={m.endPoint.z} r="10" fill="#e11d48" />
+              <circle
+                cx={m.startPoint.x}
+                cy={m.startPoint.z}
+                r={unit * 0.22}
+                fill="#be123c"
+              />
+              <circle
+                cx={m.endPoint.x}
+                cy={m.endPoint.z}
+                r={unit * 0.22}
+                fill="#be123c"
+              />
               <rect
-                x={mx - 80}
-                y={mz - 24}
-                width="160"
-                height="48"
+                x={mx - mBoxW / 2}
+                y={mz - mBoxH / 2}
+                width={mBoxW}
+                height={mBoxH}
                 fill="#ffe4e6"
-                stroke="#e11d48"
-                strokeWidth="2"
-                rx="5"
+                stroke="#be123c"
+                strokeWidth={unit * 0.08}
+                rx={unit * 0.15}
               />
               <text
                 x={mx}
-                y={mz + 8}
-                fill="#9f1239"
-                fontSize="24"
+                y={mz + clearanceFontSize * 0.36}
+                fill="#881337"
+                fontSize={clearanceFontSize}
                 fontWeight="bold"
                 textAnchor="middle"
                 fontFamily="sans-serif"
@@ -393,17 +631,34 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           );
         })}
 
-        {/* 方位記号（北マーク） */}
-        <g transform={`translate(${bounds.maxX - 200}, ${bounds.minZ + 200})`}>
-          <circle cx="0" cy="0" r="60" fill="#ffffff" stroke="#0f172a" strokeWidth="2.5" />
-          <polygon points="0,-48 -20,12 0,0 20,12" fill="#0f172a" />
+        {/* 7. 方位記号（北マーク） */}
+        <g
+          transform={`translate(${bounds.maxX - unit * 2.6}, ${
+            bounds.minZ + unit * 2.6
+          })`}
+        >
+          <circle
+            cx="0"
+            cy="0"
+            r={unit * 1.1}
+            fill="#ffffff"
+            stroke="#0f172a"
+            strokeWidth={unit * 0.09}
+          />
+          <polygon
+            points={`0,${-unit * 0.85} ${-unit * 0.38},${unit * 0.35} 0,${
+              unit * 0.1
+            } ${unit * 0.38},${unit * 0.35}`}
+            fill="#0f172a"
+          />
           <text
             x="0"
-            y="-56"
+            y={-unit * 1.3}
             fill="#0f172a"
-            fontSize="24"
+            fontSize={unit * 0.9}
             fontWeight="bold"
             textAnchor="middle"
+            fontFamily="sans-serif"
           >
             N
           </text>

@@ -20,47 +20,45 @@ body,
 @media print {
   @page {
     size: A4 portrait;
-    margin: 12mm 10mm;
+    margin: 10mm;
   }
 
-  /* HTML・BODYの高さ固定やスクロール抑制を完全解除 */
+  /* HTML・BODYの高さ固定やスクロール抑制、暗色背景を完全解除 */
   html,
   body {
     width: 100% !important;
     height: auto !important;
-    min-height: 100% !important;
+    min-height: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
     overflow: visible !important;
-    background-color: #ffffff !important;
+    background: #ffffff !important;
     color: #0f172a !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
-  /* 画面全体のアプリレイアウト・ツールバー・キャンバスを完全に非表示 */
-  header,
-  aside,
-  main,
-  #root > div > header,
-  #root > div > div:not(.print-modal-container) {
+  /* 3Dアプリのメインツリー (#root) を完全に非表示化し、h-screen等の影響をゼロにする */
+  #root {
     display: none !important;
   }
 
-  /* モーダルの背景オーバーレイや固定位置を解除 */
-  .print-modal-backdrop {
+  /* body直下にPortalマウントされた印刷モーダルを通常のブロック要素として展開 */
+  #print-portal-root {
     position: static !important;
+    display: block !important;
     width: 100% !important;
     height: auto !important;
-    background: transparent !important;
     padding: 0 !important;
     margin: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
     overflow: visible !important;
-    display: block !important;
   }
 
   .print-modal-window {
     position: static !important;
+    display: block !important;
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
@@ -71,37 +69,35 @@ body,
     overflow: visible !important;
   }
 
-  /* モーダルヘッダー（閉じるボタンや印刷ボタン）を印刷紙面から除外 */
   .print-modal-header {
     display: none !important;
   }
 
   .print-modal-body {
     padding: 0 !important;
+    margin: 0 !important;
     background: transparent !important;
     overflow: visible !important;
   }
 
-  /* 印刷対象エリア（紙面いっぱいに展開） */
   #print-section {
-    position: relative !important;
     width: 100% !important;
     max-width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
-    background-color: #ffffff !important;
+    background: #ffffff !important;
     overflow: visible !important;
   }
 
-  /* 1ページ目（図面）の後に必要に応じて綺麗に改ページ */
-  .print-page-break {
-    page-break-after: always !important;
-    break-after: page !important;
+  .print-svg-wrapper {
+    width: 100% !important;
+    padding: 4px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
-  /* テーブルの改ページ時またぎ制御 */
   table {
     width: 100% !important;
     page-break-inside: auto !important;
@@ -109,6 +105,6 @@ body,
 
   tr {
     page-break-inside: avoid !important;
-    page-break-after: auto !important;
+    break-inside: avoid !important;
   }
 }
