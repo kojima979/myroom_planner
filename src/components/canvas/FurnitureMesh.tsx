@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ThreeEvent } from '@react-three/fiber';
 import { Html, Line, TransformControls } from '@react-three/drei';
@@ -7,11 +7,15 @@ import { computeCollidingFurnitureIds } from '../../utils/geometry';
 import { FurnitureItem } from '../../types/room';
 import { PresetGeometryRenderer } from './PresetGeometries';
 
+/** 干渉警告ポップアップのデフォルト表示秒数（秒） */
+export const DEFAULT_COLLISION_WARNING_DURATION_SEC = 5;
+
 const SingleFurnitureNode: React.FC<{
   item: FurnitureItem;
   isSelected: boolean;
   isColliding: boolean;
-}> = ({ item, isSelected, isColliding }) => {
+  warningDurationSec: number;
+}> = ({ item, isSelected, isColliding, warningDurationSec }) => {
   const groupRef = useRef<THREE.Group>(null);
   const editorMode = useRoomStore((s) => s.editorMode);
   const gizmoMode = useRoomStore((s) => s.gizmoMode);
@@ -21,6 +25,25 @@ const SingleFurnitureNode: React.FC<{
   const setIsDraggingGizmo = useRoomStore((s) => s.setIsDraggingGizmo);
   const handleMeasurementClick = useRoomStore((s) => s.handleMeasurementClick);
   const setHoverMeasurementPoint = useRoomStore((s) => s.setHoverMeasurementPoint);
+
+  const [showWarningPopup, setShowWarningPopup] = useState<boolean>(false);
+
+  // 干渉発生時にポップアップを表示し、warningDurationSec秒（デフォルト5秒）後に自動で消去する
+  useEffect(() => {
+    if (!isColliding || warningDurationSec <= 0) {
+      setShowWarningPopup(false);
+      return;
+    }
+
+    setShowWarningPopup(true);
+    const timerId = window.setTimeout(() => {
+      setShowWarningPopup(false);
+    }, warningDurationSec * 1000);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [isColliding, warningDurationSec]);
 
   const eulerRad = useMemo(
     () =>
@@ -88,9 +111,14 @@ const SingleFurnitureNode: React.FC<{
           />
         )}
 
-        {/* 干渉（衝突）警告バッジ */}
-        {isColliding && (
-          <Html position={[0, h + 120, 0]} center zIndexRange={[40, 0]}>
+        {/* 干渉（衝突）警告バッジ（表示開始から指定秒数後に自動消去） */}
+        {isColliding && showWarningPopup && (
+          <Html
+            position={[0, h + 120, 0]}
+            center
+            zIndexRange={[40, 0]}
+            style={{ pointerEvents: 'none' }}
+          >
             <div className="pointer-events-none select-none px-2 py-0.5 rounded bg-red-600/95 text-white text-[11px] font-bold border border-red-200 shadow-lg whitespace-nowrap">
               ⚠ 他の家具または壁と干渉しています
             </div>
@@ -136,6 +164,9 @@ const SingleFurnitureNode: React.FC<{
 export const FurnitureLayer: React.FC = () => {
   const furnitures = useRoomStore((s) => s.furnitures);
   const roomVertices = useRoomStore((s) => s.room.vertices);
+  const warningDurationSec = useRoomStore(
+    (s) => s.room.collisionWarningDurationSec ?? DEFAULT_COLLISION_WARNING_DURATION_SEC
+  );
   const selectedFurnitureId = useRoomStore((s) => s.selectedFurnitureId);
 
   const collidingIds = useMemo(
@@ -151,6 +182,7 @@ export const FurnitureLayer: React.FC = () => {
           item={item}
           isSelected={item.id === selectedFurnitureId}
           isColliding={collidingIds.has(item.id)}
+          warningDurationSec={warningDurationSec}
         />
       ))}
     </group>

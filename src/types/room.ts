@@ -56,6 +56,8 @@ export const RoomConfigSchema = z.object({
   showRightAngleMarks: z.boolean().optional().default(false),
   /** 壁一辺および壁クリアランス寸法ラベル表示のON/OFFフラグ */
   showDimensionLabels: z.boolean().optional().default(true),
+  /** 干渉警告ポップアップの表示秒数（単位: 秒、デフォルト5秒、0で非表示） */
+  collisionWarningDurationSec: z.number().min(0).max(300).optional().default(5),
   /** 壁の表示モード（半透明自動/常時表示/非表示） */
   wallVisibility: z.enum(['auto', 'visible', 'hidden']).optional().default('auto'),
 });

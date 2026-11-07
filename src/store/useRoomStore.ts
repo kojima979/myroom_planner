@@ -30,6 +30,7 @@ const INITIAL_ROOM: RoomConfig = {
   enableRightAngleSnap: true,
   showRightAngleMarks: false,
   showDimensionLabels: true,
+  collisionWarningDurationSec: 5,
   wallVisibility: 'auto',
 };
 

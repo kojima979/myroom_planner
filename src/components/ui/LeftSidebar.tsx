@@ -310,6 +310,25 @@ export const LeftSidebar: React.FC = () => {
                   className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 cursor-pointer"
                 />
               </div>
+
+              <div className="pt-1">
+                <label className="text-[10px] text-slate-400 block mb-0.5">
+                  干渉警告ポップアップ表示時間（0で非表示）
+                </label>
+                <div className="flex items-center bg-slate-800 rounded border border-slate-700 px-2 py-1">
+                  <NumericInput
+                    step={1}
+                    min={0}
+                    max={300}
+                    value={room.collisionWarningDurationSec ?? 5}
+                    onChange={(val) =>
+                      updateRoomConfig({ collisionWarningDurationSec: val })
+                    }
+                    className="w-full bg-transparent text-white focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-400">秒</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
