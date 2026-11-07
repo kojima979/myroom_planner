@@ -5,6 +5,7 @@ import {
   Download,
   Eye,
   Move,
+  Printer,
   RotateCw,
   Ruler,
   SquarePen,
@@ -13,7 +14,11 @@ import {
 import { useRoomStore } from '../../store/useRoomStore';
 import { exportProjectToJson, importProjectFromJsonFile } from '../../utils/fileIo';
 
-export const HeaderToolbar: React.FC = () => {
+type Props = {
+  onOpenPrintModal?: () => void;
+};
+
+export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
   const editorMode = useRoomStore((s) => s.editorMode);
   const setEditorMode = useRoomStore((s) => s.setEditorMode);
   const cameraMode = useRoomStore((s) => s.cameraMode);
@@ -94,8 +99,8 @@ export const HeaderToolbar: React.FC = () => {
         </button>
       </div>
 
-      {/* ギズモ操作＆視点切り替え＆ファイル入出力 */}
-      <div className="flex items-center gap-3">
+      {/* ギズモ操作＆視点切り替え＆印刷＆ファイル入出力 */}
+      <div className="flex items-center gap-2.5">
         {/* 家具モード時の移動/回転切替 */}
         {editorMode === 'furniture' && (
           <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
@@ -140,7 +145,7 @@ export const HeaderToolbar: React.FC = () => {
             }`}
           >
             <Compass className="w-3.5 h-3.5" />
-            3D自由視点
+            3D視点
           </button>
           <button
             type="button"
@@ -181,12 +186,23 @@ export const HeaderToolbar: React.FC = () => {
           </select>
         </div>
 
+        {/* 印刷 / PDF出力ボタン */}
+        <button
+          type="button"
+          onClick={onOpenPrintModal}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 border border-emerald-400 text-xs text-white font-bold shadow transition-colors"
+          title="2D平面図と家具寸法表を印刷・PDF出力"
+        >
+          <Printer className="w-3.5 h-3.5" />
+          図面印刷 / PDF
+        </button>
+
         {/* JSON保存・読込 */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => exportProjectToJson(getProjectData())}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium"
             title="現在の部屋と家具配置をJSONファイルとして保存"
           >
             <Download className="w-3.5 h-3.5 text-sky-400" />
@@ -195,7 +211,7 @@ export const HeaderToolbar: React.FC = () => {
           <button
             type="button"
             onClick={() => jsonInputRef.current?.click()}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium"
+            className="flex items-center gap-1 px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 font-medium"
             title="JSONファイルを読み込む"
           >
             <Upload className="w-3.5 h-3.5 text-emerald-400" />
