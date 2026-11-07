@@ -44,14 +44,16 @@ export const RoomConfigSchema = z.object({
   /** 部屋の床面を構成する多角形の頂点リスト（単位: mm） */
   vertices: z.array(Vector2DSchema).min(3),
   /** 天井の高さ（単位: mm） */
-  wallHeight: z.number().min(500).max(10000),
+  wallHeight: z.number().min(10).max(20000),
   /** 壁の厚み（単位: mm） */
-  wallThickness: z.number().min(20).max(1000),
+  wallThickness: z.number().min(10).max(2000),
   /** 床・壁のカラー設定 */
   floorColor: z.string(),
   wallColor: z.string(),
   /** 直角スナップの有効/無効フラグ */
   enableRightAngleSnap: z.boolean(),
+  /** 直角（∟ 90°）マーク表示のON/OFFフラグ */
+  showRightAngleMarks: z.boolean().optional().default(false),
   /** 壁の表示モード（半透明自動/常時表示/非表示） */
   wallVisibility: z.enum(['auto', 'visible', 'hidden']).optional().default('auto'),
 });
@@ -80,9 +82,9 @@ export const FurnitureItemSchema = z.object({
   presetType: FurniturePresetTypeSchema,
   /** 寸法（幅・高さ・奥行き、単位: mm） */
   dimensions: z.object({
-    width: z.number().min(10).max(20000),
-    height: z.number().min(2).max(10000),
-    depth: z.number().min(10).max(20000),
+    width: z.number().min(1).max(30000),
+    height: z.number().min(1).max(20000),
+    depth: z.number().min(1).max(30000),
   }),
   /** 3D空間上の配置座標（底面中心の座標、単位: mm） */
   position: Vector3DSchema,

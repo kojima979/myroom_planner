@@ -28,6 +28,7 @@ const INITIAL_ROOM: RoomConfig = {
   floorColor: '#e2d5c3',
   wallColor: '#f8fafc',
   enableRightAngleSnap: true,
+  showRightAngleMarks: false,
   wallVisibility: 'auto',
 };
 
@@ -183,8 +184,8 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     })),
 
   setRectangularRoomDimensions: (widthMm, depthMm) => {
-    const hw = Math.max(500, Math.round(widthMm / 2));
-    const hd = Math.max(500, Math.round(depthMm / 2));
+    const hw = Math.max(10, Math.round(widthMm / 2));
+    const hd = Math.max(10, Math.round(depthMm / 2));
     set((state) => ({
       room: {
         ...state.room,
@@ -262,7 +263,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     set((state) => {
       const verts = state.room.vertices;
       const n = verts.length;
-      if (wallIndex < 0 || wallIndex >= n || newLengthMm < 100) return state;
+      if (wallIndex < 0 || wallIndex >= n || newLengthMm < 10) return state;
 
       const start = verts[wallIndex];
       const endIndex = (wallIndex + 1) % n;

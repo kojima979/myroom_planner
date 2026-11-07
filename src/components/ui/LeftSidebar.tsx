@@ -3,6 +3,7 @@ import {
   Bed,
   Box,
   Copy,
+  CornerDownRight,
   DoorOpen,
   FolderPlus,
   Layers,
@@ -16,6 +17,7 @@ import { useRoomStore } from '../../store/useRoomStore';
 import { FURNITURE_PRESETS } from '../../constants/presets';
 import { FurniturePresetType } from '../../types/room';
 import { readModelFileAsDataUrl } from '../../utils/fileIo';
+import { NumericInput } from './NumericInput';
 
 export const LeftSidebar: React.FC = () => {
   const room = useRoomStore((s) => s.room);
@@ -201,12 +203,11 @@ export const LeftSidebar: React.FC = () => {
                     <div>
                       <label className="text-[10px] text-slate-400 block mb-0.5">幅 (X)</label>
                       <div className="flex items-center bg-slate-900 rounded border border-slate-700 px-1.5 py-1">
-                        <input
-                          type="number"
-                          step={100}
-                          min={1000}
+                        <NumericInput
+                          step={50}
+                          min={20}
                           value={rectWidth}
-                          onChange={(e) => setRectWidth(Number(e.target.value))}
+                          onChange={(val) => setRectWidth(val)}
                           className="w-full bg-transparent text-white focus:outline-none text-xs"
                         />
                         <span className="text-[10px] text-slate-500">mm</span>
@@ -215,12 +216,11 @@ export const LeftSidebar: React.FC = () => {
                     <div>
                       <label className="text-[10px] text-slate-400 block mb-0.5">奥行 (Z)</label>
                       <div className="flex items-center bg-slate-900 rounded border border-slate-700 px-1.5 py-1">
-                        <input
-                          type="number"
-                          step={100}
-                          min={1000}
+                        <NumericInput
+                          step={50}
+                          min={20}
                           value={rectDepth}
-                          onChange={(e) => setRectDepth(Number(e.target.value))}
+                          onChange={(val) => setRectDepth(val)}
                           className="w-full bg-transparent text-white focus:outline-none text-xs"
                         />
                         <span className="text-[10px] text-slate-500">mm</span>
@@ -244,7 +244,7 @@ export const LeftSidebar: React.FC = () => {
             <div className="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/40 text-amber-200">
               <span className="font-semibold block mb-1">📐 多角形・壁寸法の自由編集</span>
               <p className="text-[10px] text-amber-300/80 mb-2 leading-relaxed">
-                2D/3D画面上で各壁の「＋頂点追加」や頂点ドラッグ、壁一辺の数値クリックで自由に寸法を変更できます。
+                2D/3D画面上で各壁の「＋頂点追加」や頂点ドラッグ、右パネルの壁寸法入力で自由に寸法を変更できます。
               </p>
               <button
                 type="button"
@@ -260,13 +260,12 @@ export const LeftSidebar: React.FC = () => {
               <div>
                 <label className="text-[10px] text-slate-400 block mb-0.5">天井の高さ</label>
                 <div className="flex items-center bg-slate-800 rounded border border-slate-700 px-2 py-1">
-                  <input
-                    type="number"
+                  <NumericInput
                     step={50}
-                    min={1500}
-                    max={6000}
+                    min={10}
+                    max={20000}
                     value={room.wallHeight}
-                    onChange={(e) => updateRoomConfig({ wallHeight: Number(e.target.value) })}
+                    onChange={(val) => updateRoomConfig({ wallHeight: val })}
                     className="w-full bg-transparent text-white focus:outline-none"
                   />
                   <span className="text-[10px] text-slate-400">mm</span>
@@ -296,6 +295,19 @@ export const LeftSidebar: React.FC = () => {
                   checked={room.enableRightAngleSnap}
                   onChange={(e) => updateRoomConfig({ enableRightAngleSnap: e.target.checked })}
                   className="w-4 h-4 rounded text-sky-500 bg-slate-800 border-slate-700 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-slate-300 flex items-center gap-1.5">
+                  <CornerDownRight className="w-3.5 h-3.5 text-emerald-400" />
+                  直角マーク表示 (∟90°)
+                </span>
+                <input
+                  type="checkbox"
+                  checked={room.showRightAngleMarks ?? false}
+                  onChange={(e) => updateRoomConfig({ showRightAngleMarks: e.target.checked })}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-800 border-slate-700 cursor-pointer"
                 />
               </div>
             </div>

@@ -2,6 +2,7 @@ import React, { useRef } from 'react';
 import {
   Box,
   Compass,
+  CornerDownRight,
   Download,
   Eye,
   Move,
@@ -26,6 +27,7 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
   const gizmoMode = useRoomStore((s) => s.gizmoMode);
   const setGizmoMode = useRoomStore((s) => s.setGizmoMode);
   const wallVisibility = useRoomStore((s) => s.room.wallVisibility ?? 'auto');
+  const showRightAngleMarks = useRoomStore((s) => s.room.showRightAngleMarks ?? false);
   const updateRoomConfig = useRoomStore((s) => s.updateRoomConfig);
   const getProjectData = useRoomStore((s) => s.getProjectData);
   const loadProjectData = useRoomStore((s) => s.loadProjectData);
@@ -99,15 +101,15 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
         </button>
       </div>
 
-      {/* ギズモ操作＆視点切り替え＆印刷＆ファイル入出力 */}
-      <div className="flex items-center gap-2.5">
+      {/* ギズモ操作＆視点切り替え＆直角表示切替＆印刷＆ファイル入出力 */}
+      <div className="flex items-center gap-2">
         {/* 家具モード時の移動/回転切替 */}
         {editorMode === 'furniture' && (
           <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
             <button
               type="button"
               onClick={() => setGizmoMode('translate')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                 gizmoMode === 'translate'
                   ? 'bg-slate-600 text-white'
                   : 'text-slate-400 hover:text-slate-200'
@@ -120,7 +122,7 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
             <button
               type="button"
               onClick={() => setGizmoMode('rotate')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium ${
                 gizmoMode === 'rotate'
                   ? 'bg-slate-600 text-white'
                   : 'text-slate-400 hover:text-slate-200'
@@ -133,12 +135,27 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
           </div>
         )}
 
+        {/* 直角表示（∟90°）ON/OFFトグルボタン */}
+        <button
+          type="button"
+          onClick={() => updateRoomConfig({ showRightAngleMarks: !showRightAngleMarks })}
+          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+            showRightAngleMarks
+              ? 'bg-emerald-600/90 border-emerald-400 text-white'
+              : 'bg-slate-800 border-slate-700 text-slate-400 hover:text-slate-200'
+          }`}
+          title="壁コーナーの直角（∟90°）表示のON/OFFを切り替えます（OFF時も直角スナップ機能は動作します）"
+        >
+          <CornerDownRight className="w-3.5 h-3.5" />
+          直角表示: {showRightAngleMarks ? 'ON' : 'OFF'}
+        </button>
+
         {/* 3D / 2D視点切替 */}
         <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-lg border border-slate-700">
           <button
             type="button"
             onClick={() => setCameraMode('3d')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold ${
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
               cameraMode === '3d'
                 ? 'bg-indigo-500 text-white'
                 : 'text-slate-400 hover:text-slate-200'
@@ -150,7 +167,7 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
           <button
             type="button"
             onClick={() => setCameraMode('2d')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-semibold ${
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${
               cameraMode === '2d'
                 ? 'bg-indigo-500 text-white'
                 : 'text-slate-400 hover:text-slate-200'

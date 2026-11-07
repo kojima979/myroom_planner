@@ -1,6 +1,8 @@
 import React, { useMemo } from 'react';
 import {
   ArrowLeftRight,
+  CornerDownRight,
+  Magnet,
   Maximize2,
   Move,
   RotateCw,
@@ -9,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useRoomStore } from '../../store/useRoomStore';
 import { computeWallClearances, computeWallSegments } from '../../utils/geometry';
+import { NumericInput } from './NumericInput';
 
 export const RightInspector: React.FC = () => {
   const editorMode = useRoomStore((s) => s.editorMode);
@@ -21,6 +24,7 @@ export const RightInspector: React.FC = () => {
   const removeFurniture = useRoomStore((s) => s.removeFurniture);
 
   const room = useRoomStore((s) => s.room);
+  const updateRoomConfig = useRoomStore((s) => s.updateRoomConfig);
   const selectedVertexIndex = useRoomStore((s) => s.selectedVertexIndex);
   const updateVertexPosition = useRoomStore((s) => s.updateVertexPosition);
   const removeVertex = useRoomStore((s) => s.removeVertex);
@@ -133,7 +137,7 @@ export const RightInspector: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 家具寸法（幅・奥行き・高さ） */}
+                {/* 家具寸法（幅・奥行き・高さ: 1mm〜任意の値を自由に入力可能） */}
                 <div className="pt-2 border-t border-slate-800">
                   <div className="flex items-center gap-1 mb-2 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                     <Maximize2 className="w-3.5 h-3.5 text-sky-400" />
@@ -142,45 +146,39 @@ export const RightInspector: React.FC = () => {
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <label className="text-[10px] text-slate-400 block mb-0.5">幅 (W)</label>
-                      <input
-                        type="number"
+                      <NumericInput
                         step={10}
-                        min={50}
+                        min={1}
+                        max={30000}
                         value={selectedItem.dimensions.width}
-                        onChange={(e) =>
-                          updateFurnitureDimensions(selectedItem.id, {
-                            width: Math.max(50, Number(e.target.value)),
-                          })
+                        onChange={(val) =>
+                          updateFurnitureDimensions(selectedItem.id, { width: val })
                         }
                         className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-sky-500"
                       />
                     </div>
                     <div>
                       <label className="text-[10px] text-slate-400 block mb-0.5">奥行 (D)</label>
-                      <input
-                        type="number"
+                      <NumericInput
                         step={10}
-                        min={50}
+                        min={1}
+                        max={30000}
                         value={selectedItem.dimensions.depth}
-                        onChange={(e) =>
-                          updateFurnitureDimensions(selectedItem.id, {
-                            depth: Math.max(50, Number(e.target.value)),
-                          })
+                        onChange={(val) =>
+                          updateFurnitureDimensions(selectedItem.id, { depth: val })
                         }
                         className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-sky-500"
                       />
                     </div>
                     <div>
                       <label className="text-[10px] text-slate-400 block mb-0.5">高さ (H)</label>
-                      <input
-                        type="number"
+                      <NumericInput
                         step={10}
-                        min={10}
+                        min={1}
+                        max={20000}
                         value={selectedItem.dimensions.height}
-                        onChange={(e) =>
-                          updateFurnitureDimensions(selectedItem.id, {
-                            height: Math.max(10, Number(e.target.value)),
-                          })
+                        onChange={(val) =>
+                          updateFurnitureDimensions(selectedItem.id, { height: val })
                         }
                         className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-sky-500"
                       />
@@ -195,7 +193,7 @@ export const RightInspector: React.FC = () => {
                     壁との寸法・隙間微調整
                   </div>
                   <p className="text-[10px] text-slate-400 mb-2 leading-relaxed">
-                    家具から各壁面までの距離です。数値を変更して壁からの間隔を微調整できます。
+                    家具から各壁面までの距離です。数値を入力してEnter（またはフォーカス移動）で隙間を微調整できます。
                   </p>
                   <div className="space-y-1.5">
                     {clearances.map((c) => (
@@ -210,15 +208,13 @@ export const RightInspector: React.FC = () => {
                           <span className="text-slate-300">壁までの距離:</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          <input
-                            type="number"
+                          <NumericInput
                             step={10}
                             min={0}
                             value={c.distanceMm}
-                            onChange={(e) =>
-                              handleClearanceAdjustment(c.direction, Number(e.target.value))
-                            }
-                            className="w-16 bg-slate-900 border border-slate-600 rounded px-1 py-0.5 text-right font-mono text-cyan-200 focus:outline-none focus:border-cyan-400 text-xs"
+                            commitOnBlurOnly
+                            onChange={(val) => handleClearanceAdjustment(c.direction, val)}
+                            className="w-20 bg-slate-900 border border-slate-600 rounded px-1.5 py-0.5 text-right font-mono text-cyan-200 focus:outline-none focus:border-cyan-400 text-xs"
                           />
                           <span className="text-[10px] text-slate-400">mm</span>
                         </div>
@@ -237,14 +233,11 @@ export const RightInspector: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2">
                       <div>
                         <label className="text-[10px] text-slate-400 block mb-0.5">X</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           step={10}
                           value={selectedItem.position.x}
-                          onChange={(e) =>
-                            updateFurniturePosition(selectedItem.id, {
-                              x: Number(e.target.value),
-                            })
+                          onChange={(val) =>
+                            updateFurniturePosition(selectedItem.id, { x: val })
                           }
                           className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none"
                         />
@@ -253,29 +246,23 @@ export const RightInspector: React.FC = () => {
                         <label className="text-[10px] text-slate-400 block mb-0.5">
                           Y (高さ)
                         </label>
-                        <input
-                          type="number"
+                        <NumericInput
                           step={10}
                           min={0}
                           value={selectedItem.position.y}
-                          onChange={(e) =>
-                            updateFurniturePosition(selectedItem.id, {
-                              y: Math.max(0, Number(e.target.value)),
-                            })
+                          onChange={(val) =>
+                            updateFurniturePosition(selectedItem.id, { y: val })
                           }
                           className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none"
                         />
                       </div>
                       <div>
                         <label className="text-[10px] text-slate-400 block mb-0.5">Z</label>
-                        <input
-                          type="number"
+                        <NumericInput
                           step={10}
                           value={selectedItem.position.z}
-                          onChange={(e) =>
-                            updateFurniturePosition(selectedItem.id, {
-                              z: Number(e.target.value),
-                            })
+                          onChange={(val) =>
+                            updateFurniturePosition(selectedItem.id, { z: val })
                           }
                           className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none"
                         />
@@ -302,9 +289,16 @@ export const RightInspector: React.FC = () => {
                         }
                         className="flex-1 accent-sky-500"
                       />
-                      <div className="w-14 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-center font-mono text-white text-xs">
-                        {selectedItem.rotation.y}°
-                      </div>
+                      <NumericInput
+                        step={5}
+                        min={-360}
+                        max={360}
+                        value={selectedItem.rotation.y}
+                        onChange={(val) =>
+                          updateFurnitureRotation(selectedItem.id, { y: val })
+                        }
+                        className="w-16 bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-center font-mono text-white text-xs focus:outline-none"
+                      />
                     </div>
                   </div>
                 </div>
@@ -320,11 +314,42 @@ export const RightInspector: React.FC = () => {
         {/* 2. 部屋編集モード時 */}
         {editorMode === 'room_edit' && (
           <div className="space-y-4">
+            {/* 直角スナップ・直角表示のON/OFF設定 */}
+            <div className="p-2.5 rounded-lg bg-slate-800/70 border border-slate-700 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-200 flex items-center gap-1.5 font-medium">
+                  <Magnet className="w-3.5 h-3.5 text-emerald-400" />
+                  壁の直角スナップ機能
+                </span>
+                <input
+                  type="checkbox"
+                  checked={room.enableRightAngleSnap}
+                  onChange={(e) => updateRoomConfig({ enableRightAngleSnap: e.target.checked })}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-600 cursor-pointer"
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-200 flex items-center gap-1.5 font-medium">
+                  <CornerDownRight className="w-3.5 h-3.5 text-emerald-400" />
+                  直角表示 (∟90° マーク)
+                </span>
+                <input
+                  type="checkbox"
+                  checked={room.showRightAngleMarks ?? false}
+                  onChange={(e) => updateRoomConfig({ showRightAngleMarks: e.target.checked })}
+                  className="w-4 h-4 rounded text-emerald-500 bg-slate-900 border-slate-600 cursor-pointer"
+                />
+              </div>
+            </div>
+
             {/* 各壁一辺の寸法一覧 */}
             <div>
-              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block mb-2">
+              <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider block mb-1">
                 各壁一辺の寸法一覧
               </span>
+              <p className="text-[10px] text-slate-400 mb-2">
+                数値を入力してEnter（またはフォーカス移動）で壁の長さを変更できます（10mm〜対応）。
+              </p>
               <div className="space-y-1.5">
                 {wallSegments.map((seg) => (
                   <div
@@ -335,20 +360,19 @@ export const RightInspector: React.FC = () => {
                       <span className="font-bold text-slate-200">壁 {seg.index + 1}:</span>
                       {seg.isRightAngle && (
                         <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-500/40">
-                          ∟ 90°直角
+                          ∟90°
                         </span>
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <input
-                        type="number"
+                      <NumericInput
                         step={10}
-                        min={100}
+                        min={10}
+                        max={50000}
                         value={seg.lengthMm}
-                        onChange={(e) =>
-                          updateWallSegmentLength(seg.index, Number(e.target.value))
-                        }
-                        className="w-16 bg-slate-900 border border-slate-600 rounded px-1 py-0.5 text-right font-mono text-white text-xs"
+                        commitOnBlurOnly
+                        onChange={(val) => updateWallSegmentLength(seg.index, val)}
+                        className="w-20 bg-slate-900 border border-slate-600 rounded px-1.5 py-0.5 text-right font-mono text-white text-xs focus:outline-none focus:border-amber-400"
                       />
                       <span className="text-[10px] text-slate-400">mm</span>
                     </div>
@@ -378,32 +402,30 @@ export const RightInspector: React.FC = () => {
                 <div className="grid grid-cols-2 gap-2">
                   <div>
                     <label className="text-[10px] text-slate-400 block mb-0.5">X 座標</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       step={10}
                       value={room.vertices[selectedVertexIndex].x}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         updateVertexPosition(selectedVertexIndex, {
-                          x: Number(e.target.value),
+                          x: val,
                           z: room.vertices[selectedVertexIndex].z,
                         })
                       }
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center"
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-orange-400"
                     />
                   </div>
                   <div>
                     <label className="text-[10px] text-slate-400 block mb-0.5">Z 座標</label>
-                    <input
-                      type="number"
+                    <NumericInput
                       step={10}
                       value={room.vertices[selectedVertexIndex].z}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         updateVertexPosition(selectedVertexIndex, {
                           x: room.vertices[selectedVertexIndex].x,
-                          z: Number(e.target.value),
+                          z: val,
                         })
                       }
-                      className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center"
+                      className="w-full bg-slate-800 border border-slate-700 rounded px-1.5 py-1 text-white text-center focus:outline-none focus:border-orange-400"
                     />
                   </div>
                 </div>

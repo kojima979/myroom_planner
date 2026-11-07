@@ -61,6 +61,7 @@ export const FloorPlanPolygonEditor: React.FC = () => {
       setDraggingIndex(null);
       setSnapGuides([]);
       setIsDraggingGizmo(false);
+      gl.domElement.style.cursor = 'default';
     };
 
     window.addEventListener('pointermove', handlePointerMove);
@@ -89,11 +90,16 @@ export const FloorPlanPolygonEditor: React.FC = () => {
 
   const wallSegments = computeWallSegments(room.vertices);
 
-  const handleVertexPointerDown = (e: ThreeEvent<PointerEvent>, idx: number) => {
-    e.stopPropagation();
+  const startVertexDrag = (idx: number) => {
     selectVertex(idx);
     setDraggingIndex(idx);
     setIsDraggingGizmo(true);
+    gl.domElement.style.cursor = 'grabbing';
+  };
+
+  const handleVertexPointerDown = (e: ThreeEvent<PointerEvent>, idx: number) => {
+    e.stopPropagation();
+    startVertexDrag(idx);
   };
 
   return (
@@ -120,13 +126,15 @@ export const FloorPlanPolygonEditor: React.FC = () => {
         const isDragging = draggingIndex === idx;
 
         return (
-          <group key={idx} position={[vert.x, 20, vert.z]}>
+          <group key={idx} position={[vert.x, 25, vert.z]}>
             {/* ヒット判定を広めにとった円柱ハンドル */}
             <mesh
               onPointerDown={(e) => handleVertexPointerDown(e, idx)}
               onPointerOver={(e) => {
                 e.stopPropagation();
-                gl.domElement.style.cursor = 'grab';
+                if (draggingIndex === null) {
+                  gl.domElement.style.cursor = 'grab';
+                }
               }}
               onPointerOut={() => {
                 if (draggingIndex === null) {
@@ -134,23 +142,23 @@ export const FloorPlanPolygonEditor: React.FC = () => {
                 }
               }}
             >
-              <cylinderGeometry args={[130, 130, 45, 24]} />
+              <cylinderGeometry args={[150, 150, 50, 24]} />
               <meshStandardMaterial
                 color={isDragging ? '#0284c7' : isSelected ? '#38bdf8' : '#f97316'}
                 emissive={isDragging ? '#38bdf8' : isSelected ? '#0284c7' : '#c2410c'}
-                emissiveIntensity={isDragging ? 0.7 : 0.4}
+                emissiveIntensity={isDragging ? 0.7 : 0.45}
                 roughness={0.3}
               />
             </mesh>
 
-            {/* 頂点座標ラベル */}
-            <Html position={[0, 80, 0]} center zIndexRange={[35, 0]}>
+            {/* 頂点ラベルバッジ（バッジ自体を掴んでもドラッグ開始可能） */}
+            <Html position={[0, 85, 0]} center zIndexRange={[40, 0]}>
               <div
                 onPointerDown={(e) => {
                   e.stopPropagation();
-                  selectVertex(idx);
+                  startVertexDrag(idx);
                 }}
-                className={`select-none px-2 py-0.5 rounded text-[10px] font-bold shadow-lg border whitespace-nowrap transition-transform ${
+                className={`cursor-grab active:cursor-grabbing select-none px-2 py-0.5 rounded text-[10px] font-bold shadow-lg border whitespace-nowrap transition-transform ${
                   isDragging
                     ? 'bg-sky-400 text-slate-950 border-white scale-110 ring-2 ring-sky-300'
                     : isSelected
@@ -166,27 +174,33 @@ export const FloorPlanPolygonEditor: React.FC = () => {
         );
       })}
 
-      {/* 各壁の中間点にある「＋頂点追加」ボタン */}
-      {wallSegments.map((seg) => (
-        <Html
-          key={`add-vert-${seg.index}`}
-          position={[seg.midPoint.x, 25, seg.midPoint.z]}
-          center
-          zIndexRange={[25, 0]}
-        >
-          <button
-            type="button"
-            title="この壁を分割して新しい頂点を追加"
-            onClick={(e) => {
-              e.stopPropagation();
-              addVertexOnWall(seg.index);
-            }}
-            className="mt-8 px-2.5 py-1 rounded-full bg-emerald-600/95 hover:bg-emerald-500 text-white text-[10px] font-bold border border-emerald-300 shadow-md pointer-events-auto whitespace-nowrap active:scale-95 transition-transform"
-          >
-            ＋頂点追加
-          </button>
-        </Html>
-      ))}
+      {/* 各壁の中間点にある「＋頂点追加」ボタン（ドラッグ中は非表示、部屋内側へ少しオフセットして頂点と重ならないように配置） */}
+      {draggingIndex === null &&
+        wallSegments.map((seg) => {
+          if (seg.lengthMm < 300) return null;
+          const inwardX = seg.midPoint.x + seg.normal.x * 160;
+          const inwardZ = seg.midPoint.z + seg.normal.z * 160;
+          return (
+            <Html
+              key={`add-vert-${seg.index}`}
+              position={[inwardX, 20, inwardZ]}
+              center
+              zIndexRange={[20, 0]}
+            >
+              <button
+                type="button"
+                title="この壁を分割して新しい頂点を追加"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addVertexOnWall(seg.index);
+                }}
+                className="px-2 py-0.5 rounded-full bg-emerald-600/90 hover:bg-emerald-500 text-white text-[10px] font-bold border border-emerald-300 shadow pointer-events-auto whitespace-nowrap active:scale-95 transition-transform"
+              >
+                ＋頂点追加
+              </button>
+            </Html>
+          );
+        })}
     </group>
   );
 };
