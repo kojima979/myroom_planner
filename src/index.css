@@ -16,10 +16,17 @@ body,
 
 /* 印刷専用スタイル */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+
   body {
     background-color: #ffffff !important;
     color: #0f172a !important;
     overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   /* 画面全体のアプリレイアウトや3Dキャンバスを非表示 */
@@ -32,11 +39,12 @@ body,
     display: none !important;
   }
 
-  /* 印刷プレビューモーダルの枠線や背景を消去し、印刷エリアのみを直接用紙に出力 */
+  /* 印刷プレビューモーダルの固定配置や暗色背景を解除 */
   .fixed.inset-0 {
     position: static !important;
     background: none !important;
     padding: 0 !important;
+    overflow: visible !important;
   }
 
   .fixed.inset-0 > div {
@@ -45,22 +53,36 @@ body,
     border: none !important;
     background: transparent !important;
     box-shadow: none !important;
+    overflow: visible !important;
   }
 
   .fixed.inset-0 > div > div:first-child {
     display: none !important;
   }
 
+  .fixed.inset-0 > div > div.flex-1 {
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
   #print-section {
     box-shadow: none !important;
     border: none !important;
     padding: 0 !important;
+    margin: 0 auto !important;
     width: 100% !important;
     max-width: 100% !important;
+    background-color: #ffffff !important;
   }
 
-  @page {
-    size: A4 portrait;
-    margin: 10mm;
+  /* テーブルの改ページ制御 */
+  table {
+    page-break-inside: auto;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
   }
 }
