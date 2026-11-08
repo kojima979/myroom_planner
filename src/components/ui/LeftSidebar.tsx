@@ -3,11 +3,14 @@ import {
   Armchair,
   Bed,
   Box,
+  CircleDot,
+  Coffee,
   Compass,
   CookingPot,
   Copy,
   CornerDownRight,
   DoorOpen,
+  Flower2,
   FolderPlus,
   Home,
   Layers,
@@ -98,6 +101,12 @@ export const LeftSidebar: React.FC = () => {
         return <Tv className="w-4 h-4 text-violet-400" />;
       case 'bean_table':
         return <Utensils className="w-4 h-4 text-amber-500" />;
+      case 'round_table':
+        return <CircleDot className="w-4 h-4 text-amber-400" />;
+      case 'low_table':
+        return <Coffee className="w-4 h-4 text-amber-600" />;
+      case 'plant':
+        return <Flower2 className="w-4 h-4 text-emerald-500" />;
       case 'window':
         return <Maximize2 className="w-4 h-4 text-cyan-400" />;
       case 'door':

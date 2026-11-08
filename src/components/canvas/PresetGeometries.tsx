@@ -351,6 +351,157 @@ export const PresetGeometryRenderer: React.FC<Props> = ({
       );
     }
 
+    case 'round_table': {
+      const topThickness = Math.min(35, h * 0.06);
+      const topRadiusX = w / 2;
+      const legRadius = Math.min(18, w * 0.035);
+      const legH = Math.max(10, h - topThickness);
+      const scaleZ = d / Math.max(1, w);
+      const legSpread = 0.65;
+      const legAngleOffset = Math.PI / 4; // 45度ずつ4本
+
+      return (
+        <group>
+          {/* 丸天板（楕円変形対応） */}
+          <mesh
+            position={[0, h - topThickness / 2, 0]}
+            scale={[1, 1, scaleZ]}
+            castShadow
+            receiveShadow
+          >
+            <cylinderGeometry args={[topRadiusX, topRadiusX, topThickness, 48]} />
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              roughness={0.45}
+            />
+          </mesh>
+          {/* 4本脚 */}
+          {[0, 1, 2, 3].map((idx) => {
+            const angle = legAngleOffset + (idx * Math.PI) / 2;
+            const lx = Math.cos(angle) * (topRadiusX * legSpread);
+            const lz = Math.sin(angle) * ((d / 2) * legSpread);
+            return (
+              <mesh key={idx} position={[lx, legH / 2, lz]} castShadow receiveShadow>
+                <cylinderGeometry args={[legRadius * 0.8, legRadius, legH, 16]} />
+                <meshStandardMaterial color="#475569" roughness={0.5} metalness={0.3} />
+              </mesh>
+            );
+          })}
+        </group>
+      );
+    }
+
+    case 'low_table': {
+      const topThickness = Math.min(26, h * 0.09);
+      const shelfThickness = 14;
+      const shelfY = h * 0.35;
+      const legThickness = Math.min(35, w * 0.06, d * 0.08);
+      const legH = Math.max(10, h - topThickness);
+      const offsetX = w / 2 - legThickness / 2 - 12;
+      const offsetZ = d / 2 - legThickness / 2 - 12;
+
+      return (
+        <group>
+          {/* メイン天板 */}
+          <mesh position={[0, h - topThickness / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, topThickness, d]} />
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              roughness={0.5}
+            />
+          </mesh>
+          {/* 中棚（収納シェルフ） */}
+          <mesh position={[0, shelfY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w * 0.86, shelfThickness, d * 0.76]} />
+            <meshStandardMaterial color="#334155" roughness={0.6} />
+          </mesh>
+          {/* 4本脚 */}
+          {[
+            [-offsetX, -offsetZ],
+            [offsetX, -offsetZ],
+            [-offsetX, offsetZ],
+            [offsetX, offsetZ],
+          ].map(([lx, lz], idx) => (
+            <mesh key={idx} position={[lx, legH / 2, lz]} castShadow receiveShadow>
+              <boxGeometry args={[legThickness, legH, legThickness]} />
+              <meshStandardMaterial color="#1e293b" roughness={0.5} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
+
+    case 'plant': {
+      const potH = h * 0.32;
+      const potRTop = Math.min(w, d) * 0.36;
+      const potRBottom = potRTop * 0.72;
+      const stemH = h * 0.55;
+      const foliageR = Math.min(w, d) * 0.32;
+
+      return (
+        <group>
+          {/* 陶器鉢（ポット） */}
+          <mesh position={[0, potH / 2, 0]} castShadow receiveShadow>
+            <cylinderGeometry args={[potRTop, potRBottom, potH, 28]} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              roughness={0.3}
+              metalness={0.1}
+            />
+          </mesh>
+          {/* 土（ソイル） */}
+          <mesh position={[0, potH - 8, 0]}>
+            <cylinderGeometry args={[potRTop * 0.92, potRTop * 0.92, 16, 24]} />
+            <meshStandardMaterial color="#271c14" roughness={0.9} />
+          </mesh>
+          {/* 主幹・茎 */}
+          <mesh position={[0, potH + stemH / 2 - 10, 0]} castShadow>
+            <cylinderGeometry args={[14, 18, stemH, 12]} />
+            <meshStandardMaterial color="#4a3728" roughness={0.8} />
+          </mesh>
+          {/* 葉群クラスタ（フォリッジ） */}
+          <group position={[0, h * 0.75, 0]}>
+            {/* 中央トップ葉群 */}
+            <mesh position={[0, foliageR * 0.35, 0]} castShadow>
+              <sphereGeometry args={[foliageR * 0.85, 16, 16]} />
+              <meshStandardMaterial
+                color={baseColor}
+                emissive={emissiveColor}
+                emissiveIntensity={emissiveIntensity}
+                roughness={0.5}
+              />
+            </mesh>
+            {/* サブ葉群（前後左右に自然な広がり） */}
+            {[
+              [foliageR * 0.45, 0, foliageR * 0.25, 0.75],
+              [-foliageR * 0.45, foliageR * 0.15, foliageR * 0.2, 0.7],
+              [foliageR * 0.3, -foliageR * 0.2, -foliageR * 0.4, 0.65],
+              [-foliageR * 0.35, -foliageR * 0.1, -foliageR * 0.35, 0.68],
+            ].map(([sx, sy, sz, scaleFactor], idx) => (
+              <mesh
+                key={idx}
+                position={[sx, sy, sz]}
+                scale={[1, 0.8, 1]}
+                castShadow
+              >
+                <sphereGeometry args={[foliageR * scaleFactor, 16, 16]} />
+                <meshStandardMaterial
+                  color={baseColor}
+                  emissive={emissiveColor}
+                  emissiveIntensity={emissiveIntensity}
+                  roughness={0.4}
+                />
+              </mesh>
+            ))}
+          </group>
+        </group>
+      );
+    }
+
     case 'chair': {
       const seatY = h * 0.52;
       const seatThickness = Math.max(30, h * 0.06);

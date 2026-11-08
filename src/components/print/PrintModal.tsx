@@ -53,10 +53,10 @@ export const PrintModal: React.FC<Props> = ({ isOpen, onClose }) => {
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [showMetadataInputs, setShowMetadataInputs] = useState(false);
 
-  if (!isOpen) return null;
-
   const currentNorthDeg = room.northAngleDeg ?? 0;
   const roomAreaInfo = useMemo(() => computeRoomFloorArea(room.vertices), [room.vertices]);
+
+  if (!isOpen) return null;
 
   const handlePrint = () => {
     window.print();
