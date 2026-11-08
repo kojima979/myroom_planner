@@ -32,6 +32,7 @@ const INITIAL_ROOM: RoomConfig = {
   showDimensionLabels: true,
   collisionWarningDurationSec: 2,
   wallVisibility: 'auto',
+  northAngleDeg: 0,
 };
 
 const INITIAL_FURNITURES: FurnitureItem[] = [
@@ -127,6 +128,7 @@ export type RoomStoreState = {
 
   // Room actions
   updateRoomConfig: (partial: Partial<RoomConfig>) => void;
+  setNorthAngleDeg: (angleDeg: number) => void;
   setRectangularRoomDimensions: (widthMm: number, depthMm: number) => void;
   setLShapedRoomPreset: () => void;
   updateVertexPosition: (index: number, pos: Vector2D) => void;
@@ -199,6 +201,14 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
   updateRoomConfig: (partial) =>
     set((state) => ({
       room: { ...state.room, ...partial },
+    })),
+
+  setNorthAngleDeg: (angleDeg) =>
+    set((state) => ({
+      room: {
+        ...state.room,
+        northAngleDeg: ((Math.round(angleDeg) % 360) + 360) % 360,
+      },
     })),
 
   setRectangularRoomDimensions: (widthMm, depthMm) => {

@@ -10,6 +10,7 @@ type Props = {
   furnitures: FurnitureItem[];
   measurements: MeasurementItem[];
   wallThickness: number;
+  northAngleDeg?: number;
 };
 
 type PlanClearanceLine = {
@@ -186,6 +187,7 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
   furnitures,
   measurements,
   wallThickness,
+  northAngleDeg = 0,
 }) => {
   const wallSegments = useMemo(() => computeWallSegments(vertices), [vertices]);
 
@@ -759,37 +761,105 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           );
         })}
 
-        {/* 7. 方位記号（北マーク） */}
+        {/* 7. 方位記号（北マーク・任意角度回転対応） */}
         <g
-          transform={`translate(${bounds.maxX - unit * 2.6}, ${
-            bounds.minZ + unit * 2.6
+          transform={`translate(${bounds.maxX - unit * 2.8}, ${
+            bounds.minZ + unit * 2.8
           })`}
         >
+          {/* 外枠コンパスリング */}
           <circle
             cx="0"
             cy="0"
-            r={unit * 1.1}
+            r={unit * 1.3}
             fill="#ffffff"
             stroke="#0f172a"
-            strokeWidth={unit * 0.09}
+            strokeWidth={unit * 0.1}
           />
-          <polygon
-            points={`0,${-unit * 0.85} ${-unit * 0.38},${unit * 0.35} 0,${
-              unit * 0.1
-            } ${unit * 0.38},${unit * 0.35}`}
-            fill="#0f172a"
+          <circle
+            cx="0"
+            cy="0"
+            r={unit * 1.15}
+            fill="none"
+            stroke="#94a3b8"
+            strokeWidth={unit * 0.04}
           />
-          <text
-            x="0"
-            y={-unit * 1.3}
-            fill="#0f172a"
-            fontSize={unit * 0.9}
-            fontWeight="bold"
-            textAnchor="middle"
-            fontFamily="sans-serif"
-          >
-            N
-          </text>
+          {/* 基軸の十字目盛り線 */}
+          <line
+            x1={-unit * 1.25}
+            y1={0}
+            x2={unit * 1.25}
+            y2={0}
+            stroke="#cbd5e1"
+            strokeWidth={unit * 0.05}
+          />
+          <line
+            x1={0}
+            y1={-unit * 1.25}
+            x2={0}
+            y2={unit * 1.25}
+            stroke="#cbd5e1"
+            strokeWidth={unit * 0.05}
+          />
+
+          {/* 回転する方位針およびN文字 */}
+          <g transform={`rotate(${northAngleDeg})`}>
+            {/* 北を指す黒塗り矢針（左半分） */}
+            <polygon
+              points={`0,${-unit * 1.05} ${-unit * 0.35},${unit * 0.25} 0,0`}
+              fill="#0f172a"
+            />
+            {/* 北を指す白抜き矢針（右半分） */}
+            <polygon
+              points={`0,${-unit * 1.05} ${unit * 0.35},${unit * 0.25} 0,0`}
+              fill="#e2e8f0"
+              stroke="#0f172a"
+              strokeWidth={unit * 0.05}
+            />
+            {/* 南を指す短い矢針 */}
+            <polygon
+              points={`0,${unit * 0.55} ${-unit * 0.22},${unit * 0.25} 0,0`}
+              fill="#94a3b8"
+            />
+            <polygon
+              points={`0,${unit * 0.55} ${unit * 0.22},${unit * 0.25} 0,0`}
+              fill="#cbd5e1"
+            />
+
+            {/* 中心留め具 */}
+            <circle cx="0" cy="0" r={unit * 0.12} fill="#0f172a" />
+
+            {/* 北記号 (N) */}
+            <g transform={`translate(0, ${-unit * 1.55})`}>
+              <text
+                x="0"
+                y="0"
+                fill="#0f172a"
+                fontSize={unit * 0.85}
+                fontWeight="900"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontFamily="sans-serif"
+              >
+                N
+              </text>
+            </g>
+          </g>
+
+          {/* 角度が0°以外の場合、角度数値を添える */}
+          {northAngleDeg !== 0 && (
+            <text
+              x="0"
+              y={unit * 1.8}
+              fill="#64748b"
+              fontSize={unit * 0.55}
+              fontWeight="bold"
+              textAnchor="middle"
+              fontFamily="sans-serif"
+            >
+              {northAngleDeg}°
+            </text>
+          )}
         </g>
       </svg>
     </div>

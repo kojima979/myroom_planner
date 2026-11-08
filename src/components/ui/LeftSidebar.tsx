@@ -3,6 +3,7 @@ import {
   Armchair,
   Bed,
   Box,
+  Compass,
   CookingPot,
   Copy,
   CornerDownRight,
@@ -13,6 +14,7 @@ import {
   Maximize2,
   Plus,
   Refrigerator,
+  RotateCw,
   SquarePen,
   Trash2,
   Tv,
@@ -27,6 +29,7 @@ import { NumericInput } from './NumericInput';
 export const LeftSidebar: React.FC = () => {
   const room = useRoomStore((s) => s.room);
   const updateRoomConfig = useRoomStore((s) => s.updateRoomConfig);
+  const setNorthAngleDeg = useRoomStore((s) => s.setNorthAngleDeg);
   const setRectangularRoomDimensions = useRoomStore((s) => s.setRectangularRoomDimensions);
   const setLShapedRoomPreset = useRoomStore((s) => s.setLShapedRoomPreset);
   const furnitures = useRoomStore((s) => s.furnitures);
@@ -235,6 +238,65 @@ export const LeftSidebar: React.FC = () => {
                     className="w-8 h-8 rounded border border-slate-700 bg-transparent cursor-pointer"
                   />
                   <span className="text-slate-300 font-mono text-[11px]">{room.floorColor}</span>
+                </div>
+              </div>
+
+              {/* 部屋の方位（北方向） */}
+              <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 flex items-center gap-1.5 text-[11px] font-semibold">
+                    <Compass className="w-3.5 h-3.5 text-sky-400" />
+                    北方向（方位）
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-sky-400 font-mono text-xs font-bold">
+                      {room.northAngleDeg ?? 0}°
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setNorthAngleDeg((room.northAngleDeg ?? 0) + 90)}
+                      className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 transition-colors"
+                      title="時計回りに90°回転"
+                    >
+                      <RotateCw className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 4方位クイックボタン */}
+                <div className="grid grid-cols-4 gap-1">
+                  {[
+                    { label: '北 (上)', deg: 0 },
+                    { label: '東 (右)', deg: 90 },
+                    { label: '南 (下)', deg: 180 },
+                    { label: '西 (左)', deg: 270 },
+                  ].map((dir) => (
+                    <button
+                      key={dir.deg}
+                      type="button"
+                      onClick={() => setNorthAngleDeg(dir.deg)}
+                      className={`py-1 px-1 rounded text-[10px] font-semibold text-center transition-colors ${
+                        (room.northAngleDeg ?? 0) === dir.deg
+                          ? 'bg-sky-600 text-white shadow'
+                          : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                      }`}
+                    >
+                      {dir.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* 角度スライダー */}
+                <div className="flex items-center gap-2 pt-0.5">
+                  <input
+                    type="range"
+                    min={0}
+                    max={355}
+                    step={5}
+                    value={room.northAngleDeg ?? 0}
+                    onChange={(e) => setNorthAngleDeg(Number(e.target.value))}
+                    className="w-full accent-sky-400 cursor-pointer"
+                  />
                 </div>
               </div>
 

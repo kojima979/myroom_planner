@@ -60,6 +60,8 @@ export const RoomConfigSchema = z.object({
   collisionWarningDurationSec: z.number().min(0).max(300).optional().default(5),
   /** 壁の表示モード（半透明自動/常時表示/非表示） */
   wallVisibility: z.enum(['auto', 'visible', 'hidden']).optional().default('auto'),
+  /** 北方向の角度（単位: degree、0°=上が北、90°=右が北、時計回り、0〜359°） */
+  northAngleDeg: z.number().min(0).max(360).optional().default(0),
 });
 
 export type RoomConfig = z.infer<typeof RoomConfigSchema>;
