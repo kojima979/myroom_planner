@@ -861,6 +861,108 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
             </text>
           )}
         </g>
+
+        {/* 8. 縮尺スケールバー（実寸mmに完全比例する建築CAD仕様スケールバー） */}
+        {(() => {
+          // 部屋の基本スパンに合わせて 1000mm(1m) または 2000mm(2m) を選択
+          const totalScaleMm = bounds.w > 5000 ? 2000 : 1000;
+          const halfScaleMm = totalScaleMm / 2;
+          const barHeight = Math.max(unit * 0.28, 12);
+          const barOriginX = bounds.minX + unit * 2.8;
+          const barOriginZ = bounds.maxZ - unit * 2.2;
+
+          return (
+            <g transform={`translate(${barOriginX}, ${barOriginZ})`}>
+              {/* スケールバー背景プレート */}
+              <rect
+                x={-unit * 0.5}
+                y={-unit * 1.5}
+                width={totalScaleMm + unit * 1.0}
+                height={unit * 2.5}
+                fill="#ffffff"
+                stroke="#cbd5e1"
+                strokeWidth={unit * 0.05}
+                rx={unit * 0.15}
+              />
+
+              {/* 第1区間 (0 〜 halfScaleMm): 黒塗り */}
+              <rect
+                x={0}
+                y={0}
+                width={halfScaleMm}
+                height={barHeight}
+                fill="#0f172a"
+                stroke="#0f172a"
+                strokeWidth={unit * 0.05}
+              />
+
+              {/* 第2区間 (halfScaleMm 〜 totalScaleMm): 白抜き */}
+              <rect
+                x={halfScaleMm}
+                y={0}
+                width={halfScaleMm}
+                height={barHeight}
+                fill="#ffffff"
+                stroke="#0f172a"
+                strokeWidth={unit * 0.05}
+              />
+
+              {/* 目盛りライン */}
+              <line x1={0} y1={-unit * 0.25} x2={0} y2={barHeight} stroke="#0f172a" strokeWidth={unit * 0.06} />
+              <line x1={halfScaleMm} y1={-unit * 0.25} x2={halfScaleMm} y2={barHeight} stroke="#0f172a" strokeWidth={unit * 0.06} />
+              <line x1={totalScaleMm} y1={-unit * 0.25} x2={totalScaleMm} y2={barHeight} stroke="#0f172a" strokeWidth={unit * 0.06} />
+
+              {/* 目盛り数値ラベル */}
+              <text
+                x={0}
+                y={-unit * 0.4}
+                fill="#0f172a"
+                fontSize={unit * 0.65}
+                fontWeight="bold"
+                textAnchor="middle"
+                fontFamily="sans-serif"
+              >
+                0
+              </text>
+              <text
+                x={halfScaleMm}
+                y={-unit * 0.4}
+                fill="#0f172a"
+                fontSize={unit * 0.65}
+                fontWeight="bold"
+                textAnchor="middle"
+                fontFamily="sans-serif"
+              >
+                {halfScaleMm.toLocaleString()}
+              </text>
+              <text
+                x={totalScaleMm}
+                y={-unit * 0.4}
+                fill="#0f172a"
+                fontSize={unit * 0.65}
+                fontWeight="bold"
+                textAnchor="middle"
+                fontFamily="sans-serif"
+              >
+                {totalScaleMm.toLocaleString()} mm ({totalScaleMm / 1000}m)
+              </text>
+
+              {/* スケールバーのキャプション */}
+              <text
+                x={totalScaleMm / 2}
+                y={barHeight + unit * 0.68}
+                fill="#64748b"
+                fontSize={unit * 0.55}
+                fontWeight="bold"
+                letterSpacing="0.05em"
+                textAnchor="middle"
+                fontFamily="sans-serif"
+              >
+                SCALE BAR (実寸mm)
+              </text>
+            </g>
+          );
+        })()}
       </svg>
     </div>
   );
