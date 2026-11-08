@@ -139,6 +139,47 @@ npm run build
 npm run preview
 ```
 
+### Raspberry Pi 4 等での稼働・LAN内サーバー配信手順
+本アプリケーションはブラウザ側（WebGL）で3D描画を行うフロントエンド完結型のため、Raspberry Pi 4 を「ローカルネットワーク内のWebサーバー」として常時稼働させ、Mac・Windows・タブレット等からアクセスする運用にも最適です。
+
+#### 方法A：Mac等でビルドした `dist` フォルダのみを転送して配信する（軽量・推奨）
+Raspberry Pi 側に Node.js を入れる必要がなく、メモリ消費も最小限で動作します。
+
+1. **Mac / PC 側で本番ビルドを作成**:
+   ```bash
+   npm run build
+   ```
+2. **生成された `dist` フォルダを Raspberry Pi 4 に転送**:
+   ```bash
+   scp -r ./dist pi@<RaspberryPiのIPアドレス>:~/myroom_planner_dist
+   ```
+3. **Raspberry Pi 4 側で標準の Python HTTP サーバーを起動**:
+   ```bash
+   cd ~/myroom_planner_dist
+   python3 -m http.server 5173 --bind 0.0.0.0
+   ```
+   起動後、LAN内の任意のPCのブラウザから `http://<RaspberryPiのIPアドレス>:5173/` でアクセスできます（Nginx 等のWebサーバーで `dist` を公開することも可能です）。
+
+#### 方法B：Raspberry Pi 4 上に Node.js を導入して直接動かす
+1. **Raspberry Pi 4 に Node.js (v18以上) をインストール**:
+   ```bash
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   ```
+2. **プロジェクト一式を配置して依存パッケージをインストール**:
+   ```bash
+   cd myroom_planner
+   npm install
+   ```
+3. **サーバー起動**:
+   ```bash
+   # 開発サーバーとして起動（LAN公開設定済み）
+   npm run dev
+
+   # または本番ビルド＋プレビューサーバーとして起動（ポート4173）
+   npm run build && npm run preview
+   ```
+
 ---
 
 ## 使用技術スタック
