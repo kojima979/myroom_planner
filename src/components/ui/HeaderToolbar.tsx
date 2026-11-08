@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import {
-  Box,
   Compass,
   CornerDownRight,
   Download,
@@ -51,17 +50,6 @@ export const HeaderToolbar: React.FC<Props> = ({ onOpenPrintModal }) => {
 
   return (
     <header className="h-14 bg-slate-900 border-b border-slate-800 px-4 flex items-center justify-between shrink-0 z-20">
-      {/* アプリタイトル */}
-      <div className="flex items-center gap-2.5">
-        <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center text-slate-950 font-bold shadow">
-          <Box className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="text-sm font-bold text-white leading-tight">MyRoom Planner</h1>
-          <p className="text-[10px] text-slate-400">3D部屋・家具配置＆距離測定シミュレーター</p>
-        </div>
-      </div>
-
       {/* メインモード切り替え */}
       <div className="flex items-center gap-1 bg-slate-800/90 p-1 rounded-lg border border-slate-700">
         <button

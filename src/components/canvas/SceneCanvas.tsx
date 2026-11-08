@@ -1,4 +1,5 @@
 import React from 'react';
+import { Box } from 'lucide-react';
 import { Canvas } from '@react-three/fiber';
 import {
   ContactShadows,
@@ -119,6 +120,21 @@ export const SceneCanvas: React.FC = () => {
         {/* 任意の2点間距離測定レイヤー */}
         <MeasurementLayer />
       </Canvas>
+
+      {/* 画面左下: 格子の背景として半透明で目立たなく表示するアプリロゴと名称 */}
+      <div className="pointer-events-none select-none absolute bottom-4 left-4 z-10 flex items-center gap-2.5 opacity-20">
+        <div className="w-8 h-8 rounded-lg border border-slate-400/40 bg-slate-800/40 flex items-center justify-center text-slate-300">
+          <Box className="w-4 h-4" />
+        </div>
+        <div>
+          <span className="text-sm font-bold tracking-wider text-slate-300 uppercase block font-mono">
+            MyRoom Planner
+          </span>
+          <span className="text-[9px] tracking-wide text-slate-400 block">
+            3D ROOM & FURNITURE PLANNER
+          </span>
+        </div>
+      </div>
 
       {/* モード別の画面下部ステータス・操作ヒントバー */}
       <div className="pointer-events-none absolute bottom-3 left-1/2 -translate-x-1/2 bg-slate-900/90 border border-slate-700 text-slate-200 px-4 py-1.5 rounded-full text-xs shadow-xl flex items-center gap-3">
