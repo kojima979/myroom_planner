@@ -16,6 +16,7 @@ import {
   SquarePen,
   Trash2,
   Tv,
+  Utensils,
 } from 'lucide-react';
 import { useRoomStore } from '../../store/useRoomStore';
 import { FURNITURE_PRESETS } from '../../constants/presets';
@@ -87,6 +88,8 @@ export const LeftSidebar: React.FC = () => {
         return <CookingPot className="w-4 h-4 text-teal-400" />;
       case 'tv':
         return <Tv className="w-4 h-4 text-violet-400" />;
+      case 'bean_table':
+        return <Utensils className="w-4 h-4 text-amber-500" />;
       case 'window':
         return <Maximize2 className="w-4 h-4 text-cyan-400" />;
       case 'door':

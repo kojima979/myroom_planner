@@ -143,6 +143,20 @@ export const FURNITURE_PRESETS: FurniturePresetDefinition[] = [
     allowOverlap: false,
   },
   {
+    presetType: 'bean_table',
+    label: '豆型ダイニングテーブル',
+    category: 'furniture',
+    description: '柔らかな曲線が美しいビーンズ型天板のダイニングテーブル',
+    defaultDimensions: {
+      width: 1400,
+      height: 720,
+      depth: 850,
+    },
+    defaultY: 0,
+    defaultColor: '#d97706',
+    allowOverlap: false,
+  },
+  {
     presetType: 'window',
     label: '窓',
     category: 'fixture',

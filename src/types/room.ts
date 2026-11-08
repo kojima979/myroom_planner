@@ -74,6 +74,7 @@ export const FurniturePresetTypeSchema = z.enum([
   'refrigerator',
   'kitchen',
   'tv',
+  'bean_table',
   'window',
   'door',
   'box',

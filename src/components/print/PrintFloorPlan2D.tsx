@@ -429,22 +429,57 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           const isKitchen = f.presetType === 'kitchen';
           const isTv = f.presetType === 'tv';
           const isChair = f.presetType === 'chair';
+          const isBeanTable = f.presetType === 'bean_table';
 
           const transform = `translate(${f.position.x}, ${f.position.z}) rotate(${f.rotation.y})`;
 
           return (
             <g key={`shape-${f.id}`} transform={transform}>
-              <rect
-                x={-hw}
-                y={-hd}
-                width={f.dimensions.width}
-                height={f.dimensions.depth}
-                fill={isCarpet ? '#f5f3ff' : '#ffffff'}
-                stroke={isCarpet ? '#7c3aed' : '#0f172a'}
-                strokeWidth={isCarpet ? unit * 0.1 : unit * 0.16}
-                strokeDasharray={isCarpet ? `${unit * 0.4},${unit * 0.25}` : undefined}
-                rx={unit * 0.12}
-              />
+              {isBeanTable ? (
+                <>
+                  {/* 豆型テーブル天板 */}
+                  <path
+                    d={`M ${-hw * 0.95} ${hd * 0.05}
+                       C ${-hw * 0.95} ${-hd * 0.65}, ${-hw * 0.55} ${-hd * 0.95}, 0 ${-hd * 0.95}
+                       C ${hw * 0.55} ${-hd * 0.95}, ${hw * 0.95} ${-hd * 0.65}, ${hw * 0.95} 0
+                       C ${hw * 0.95} ${hd * 0.55}, ${hw * 0.65} ${hd * 0.85}, ${hw * 0.35} ${hd * 0.75}
+                       C ${hw * 0.15} ${hd * 0.68}, ${hw * 0.05} ${hd * 0.32}, ${-hw * 0.1} ${hd * 0.32}
+                       C ${-hw * 0.35} ${hd * 0.32}, ${-hw * 0.7} ${hd * 0.75}, ${-hw * 0.95} ${hd * 0.05} Z`}
+                    fill="#ffffff"
+                    stroke="#0f172a"
+                    strokeWidth={unit * 0.16}
+                  />
+                  {/* 4本の丸脚位置 */}
+                  {[
+                    [-hw * 0.7, -hd * 0.6],
+                    [-hw * 0.7, hd * 0.36],
+                    [hw * 0.64, -hd * 0.56],
+                    [hw * 0.56, hd * 0.5],
+                  ].map(([lx, ly], idx) => (
+                    <circle
+                      key={idx}
+                      cx={lx}
+                      cy={ly}
+                      r={Math.min(unit * 0.14, 18)}
+                      fill="#e2e8f0"
+                      stroke="#64748b"
+                      strokeWidth={unit * 0.08}
+                    />
+                  ))}
+                </>
+              ) : (
+                <rect
+                  x={-hw}
+                  y={-hd}
+                  width={f.dimensions.width}
+                  height={f.dimensions.depth}
+                  fill={isCarpet ? '#f5f3ff' : '#ffffff'}
+                  stroke={isCarpet ? '#7c3aed' : '#0f172a'}
+                  strokeWidth={isCarpet ? unit * 0.1 : unit * 0.16}
+                  strokeDasharray={isCarpet ? `${unit * 0.4},${unit * 0.25}` : undefined}
+                  rx={unit * 0.12}
+                />
+              )}
 
               {/* 冷蔵庫のドア線 */}
               {isFridge && (

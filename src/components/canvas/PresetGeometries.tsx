@@ -102,6 +102,103 @@ const CustomModelRenderer: React.FC<{
   return <primitive object={normalizedGroup} />;
 };
 
+/**
+ * 豆型（ビーンズ / オーガニック曲線）の天板を持つダイニングテーブル
+ */
+const BeanTableRenderer: React.FC<{
+  w: number;
+  h: number;
+  d: number;
+  baseColor: string;
+  emissiveColor: string;
+  emissiveIntensity: number;
+}> = ({ w, h, d, baseColor, emissiveColor, emissiveIntensity }) => {
+  const topThickness = 28;
+  const legHeight = Math.max(10, h - topThickness);
+
+  // 豆型（オーガニック曲線）の天板シェイプを作成
+  const shape = useMemo(() => {
+    const s = new THREE.Shape();
+    const hw = w * 0.5;
+    const hd = d * 0.5;
+
+    // 左端 (-hw * 0.95, -hd * 0.05) から反時計回りに描画
+    s.moveTo(-hw * 0.95, -hd * 0.05);
+    // 左奥へ (上部へのふくらみ)
+    s.bezierCurveTo(-hw * 0.95, hd * 0.65, -hw * 0.55, hd * 0.95, 0, hd * 0.95);
+    // 右奥〜右端へ
+    s.bezierCurveTo(hw * 0.55, hd * 0.95, hw * 0.95, hd * 0.65, hw * 0.95, 0);
+    // 右手前へ
+    s.bezierCurveTo(hw * 0.95, -hd * 0.55, hw * 0.65, -hd * 0.85, hw * 0.35, -hd * 0.75);
+    // 手前のくびれ（インデント）へ
+    s.bezierCurveTo(hw * 0.15, -hd * 0.68, hw * 0.05, -hd * 0.32, -hw * 0.1, -hd * 0.32);
+    // くびれから左手前、始点へ接続
+    s.bezierCurveTo(-hw * 0.35, -hd * 0.32, -hw * 0.7, -hd * 0.75, -hw * 0.95, -hd * 0.05);
+
+    return s;
+  }, [w, d]);
+
+  // 天板の押し出し設定
+  const extrudeSettings = useMemo(
+    () => ({
+      steps: 1,
+      depth: topThickness,
+      bevelEnabled: true,
+      bevelThickness: 3,
+      bevelSize: 3,
+      bevelOffset: 0,
+      bevelSegments: 3,
+    }),
+    [topThickness]
+  );
+
+  // 4本の丸脚の座標 [x, z] (ShapeのYは3Dの-Zに対応)
+  const legPositions: [number, number][] = [
+    [-w * 0.35, -d * 0.3], // 左奥
+    [-w * 0.35, d * 0.18],  // 左手前
+    [w * 0.32, -d * 0.28],  // 右奥
+    [w * 0.28, d * 0.25],   // 右手前
+  ];
+
+  return (
+    <group>
+      {/* 天板 */}
+      <mesh
+        position={[0, h - topThickness, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        castShadow
+        receiveShadow
+      >
+        <extrudeGeometry args={[shape, extrudeSettings]} />
+        <meshStandardMaterial
+          color={baseColor}
+          emissive={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
+          roughness={0.5}
+        />
+      </mesh>
+
+      {/* 4本のテーパー木製脚 */}
+      {legPositions.map(([lx, lz], idx) => (
+        <mesh
+          key={idx}
+          position={[lx, legHeight / 2, lz]}
+          castShadow
+          receiveShadow
+        >
+          <cylinderGeometry args={[20, 12, legHeight, 16]} />
+          <meshStandardMaterial
+            color={baseColor}
+            emissive={emissiveColor}
+            emissiveIntensity={emissiveIntensity}
+            roughness={0.6}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
 export const PresetGeometryRenderer: React.FC<Props> = ({
   item,
   isSelected,
@@ -238,6 +335,19 @@ export const PresetGeometryRenderer: React.FC<Props> = ({
             </mesh>
           ))}
         </group>
+      );
+    }
+
+    case 'bean_table': {
+      return (
+        <BeanTableRenderer
+          w={w}
+          h={h}
+          d={d}
+          baseColor={baseColor}
+          emissiveColor={emissiveColor}
+          emissiveIntensity={emissiveIntensity}
+        />
       );
     }
 
