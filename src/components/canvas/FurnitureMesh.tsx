@@ -41,6 +41,7 @@ const SingleFurnitureNode: React.FC<{
   const setIsDraggingGizmo = useRoomStore((s) => s.setIsDraggingGizmo);
   const handleMeasurementClick = useRoomStore((s) => s.handleMeasurementClick);
   const setHoverMeasurementPoint = useRoomStore((s) => s.setHoverMeasurementPoint);
+  const openFurnitureContextMenu = useRoomStore((s) => s.openFurnitureContextMenu);
 
   const [showWarningPopup, setShowWarningPopup] = useState<boolean>(false);
 
@@ -95,6 +96,14 @@ const SingleFurnitureNode: React.FC<{
     }
   };
 
+  const handleContextMenu = (e: ThreeEvent<MouseEvent>) => {
+    if (editorMode !== 'furniture') return;
+    e.stopPropagation();
+    e.nativeEvent.preventDefault();
+    selectFurniture(item.id);
+    openFurnitureContextMenu(item.id, e.nativeEvent.clientX, e.nativeEvent.clientY);
+  };
+
   const { width: w, height: h, depth: d } = item.dimensions;
 
   return (
@@ -105,6 +114,7 @@ const SingleFurnitureNode: React.FC<{
         rotation={eulerRad}
         onClick={handleClick}
         onPointerMove={handlePointerMove}
+        onContextMenu={handleContextMenu}
       >
         <PresetGeometryRenderer
           item={item}

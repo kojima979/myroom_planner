@@ -4,6 +4,7 @@ import { LeftSidebar } from './components/ui/LeftSidebar';
 import { RightInspector } from './components/ui/RightInspector';
 import { SceneCanvas } from './components/canvas/SceneCanvas';
 import { PrintModal } from './components/print/PrintModal';
+import { FurnitureContextMenu } from './components/ui/FurnitureContextMenu';
 import { useRoomStore } from './store/useRoomStore';
 
 export const App: React.FC = () => {
@@ -14,6 +15,7 @@ export const App: React.FC = () => {
   const removeFurniture = useRoomStore((s) => s.removeFurniture);
   const selectVertex = useRoomStore((s) => s.selectVertex);
   const cancelPendingMeasurement = useRoomStore((s) => s.cancelPendingMeasurement);
+  const closeFurnitureContextMenu = useRoomStore((s) => s.closeFurnitureContextMenu);
   const editorMode = useRoomStore((s) => s.editorMode);
   const setEditorMode = useRoomStore((s) => s.setEditorMode);
   const gizmoMode = useRoomStore((s) => s.gizmoMode);
@@ -50,6 +52,7 @@ export const App: React.FC = () => {
         }
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        closeFurnitureContextMenu();
         if (isPrintModalOpen) {
           setIsPrintModalOpen(false);
         } else {
@@ -105,6 +108,9 @@ export const App: React.FC = () => {
         {/* 右インスペクター: 選択中家具の詳細・寸法微調整・壁寸法一覧・測定リスト */}
         <RightInspector />
       </div>
+
+      {/* 家具右クリックコンテキストメニュー（削除・複製・回転モード移行） */}
+      <FurnitureContextMenu />
 
       {/* 印刷プレビュー＆出力モーダル */}
       <PrintModal

@@ -119,6 +119,11 @@ export type RoomStoreState = {
   isDraggingGizmo: boolean;
   pendingMeasurementStart: Vector3D | null;
   hoverMeasurementPoint: Vector3D | null;
+  furnitureContextMenu: { furnitureId: string; x: number; y: number } | null;
+
+  // Context menu actions
+  openFurnitureContextMenu: (furnitureId: string, x: number, y: number) => void;
+  closeFurnitureContextMenu: () => void;
 
   // Room actions
   updateRoomConfig: (partial: Partial<RoomConfig>) => void;
@@ -179,6 +184,17 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
   isDraggingGizmo: false,
   pendingMeasurementStart: null,
   hoverMeasurementPoint: null,
+  furnitureContextMenu: null,
+
+  openFurnitureContextMenu: (furnitureId, x, y) =>
+    set({
+      furnitureContextMenu: { furnitureId, x, y },
+    }),
+
+  closeFurnitureContextMenu: () =>
+    set({
+      furnitureContextMenu: null,
+    }),
 
   updateRoomConfig: (partial) =>
     set((state) => ({
@@ -394,6 +410,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
     set((state) => ({
       furnitures: state.furnitures.filter((item) => item.id !== id),
       selectedFurnitureId: state.selectedFurnitureId === id ? null : state.selectedFurnitureId,
+      furnitureContextMenu: null,
     })),
 
   duplicateFurniture: (id) =>
@@ -413,6 +430,7 @@ export const useRoomStore = create<RoomStoreState>((set, get) => ({
       return {
         furnitures: [...state.furnitures, duplicated],
         selectedFurnitureId: duplicated.id,
+        furnitureContextMenu: null,
       };
     }),
 
