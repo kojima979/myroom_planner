@@ -425,6 +425,10 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           const isCarpet = f.presetType === 'carpet';
           const isDoor = f.presetType === 'door';
           const isWindow = f.presetType === 'window';
+          const isFridge = f.presetType === 'refrigerator';
+          const isKitchen = f.presetType === 'kitchen';
+          const isTv = f.presetType === 'tv';
+          const isChair = f.presetType === 'chair';
 
           const transform = `translate(${f.position.x}, ${f.position.z}) rotate(${f.rotation.y})`;
 
@@ -441,6 +445,95 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                 strokeDasharray={isCarpet ? `${unit * 0.4},${unit * 0.25}` : undefined}
                 rx={unit * 0.12}
               />
+
+              {/* 冷蔵庫のドア線 */}
+              {isFridge && (
+                <line
+                  x1={-hw}
+                  y1={hd - unit * 0.35}
+                  x2={hw}
+                  y2={hd - unit * 0.35}
+                  stroke="#64748b"
+                  strokeWidth={unit * 0.1}
+                />
+              )}
+
+              {/* システムキッチンのシンク・コンロ */}
+              {isKitchen && (
+                <>
+                  {/* シンク（左） */}
+                  <rect
+                    x={-hw + unit * 0.3}
+                    y={-hd + unit * 0.3}
+                    width={Math.max(unit * 0.5, hw * 0.7)}
+                    height={Math.max(unit * 0.5, f.dimensions.depth - unit * 0.6)}
+                    fill="none"
+                    stroke="#0284c7"
+                    strokeWidth={unit * 0.08}
+                    rx={unit * 0.15}
+                  />
+                  {/* 水栓 */}
+                  <circle
+                    cx={-hw + unit * 0.3 + (hw * 0.7) / 2}
+                    cy={-hd + unit * 0.55}
+                    r={unit * 0.15}
+                    fill="#0284c7"
+                  />
+                  {/* コンロ口（右） */}
+                  <circle
+                    cx={hw - unit * 0.7}
+                    cy={-hd * 0.4}
+                    r={Math.min(unit * 0.45, hd * 0.4)}
+                    fill="none"
+                    stroke="#dc2626"
+                    strokeWidth={unit * 0.08}
+                  />
+                  <circle
+                    cx={hw - unit * 0.7}
+                    cy={hd * 0.4}
+                    r={Math.min(unit * 0.45, hd * 0.4)}
+                    fill="none"
+                    stroke="#dc2626"
+                    strokeWidth={unit * 0.08}
+                  />
+                </>
+              )}
+
+              {/* テレビ（モニタ）の画面・スタンド */}
+              {isTv && (
+                <>
+                  {/* スタンド台座 */}
+                  <rect
+                    x={-hw * 0.35}
+                    y={-hd * 0.6}
+                    width={hw * 0.7}
+                    height={hd * 1.2}
+                    fill="none"
+                    stroke="#64748b"
+                    strokeWidth={unit * 0.08}
+                    rx={unit * 0.08}
+                  />
+                  {/* 画面ディスプレイ線 */}
+                  <line
+                    x1={-hw}
+                    y1={0}
+                    x2={hw}
+                    y2={0}
+                    stroke="#0f172a"
+                    strokeWidth={unit * 0.16}
+                  />
+                </>
+              )}
+
+              {/* 椅子の背もたれ線 */}
+              {isChair && (
+                <path
+                  d={`M ${-hw * 0.75} ${-hd * 0.6} Q 0 ${-hd * 0.9} ${hw * 0.75} ${-hd * 0.6}`}
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth={unit * 0.12}
+                />
+              )}
 
               {/* 扉の開閉軌跡 */}
               {isDoor && (

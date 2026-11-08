@@ -73,7 +73,7 @@ const INITIAL_FURNITURES: FurnitureItem[] = [
     position: { x: 900, y: 0, z: -350 },
     rotation: { x: 0, y: 180, z: 0 },
     color: '#334155',
-    allowOverlap: false,
+    allowOverlap: true,
   },
   {
     id: 'preset-bookshelf-1',

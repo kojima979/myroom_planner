@@ -427,6 +427,233 @@ export const PresetGeometryRenderer: React.FC<Props> = ({
       );
     }
 
+    case 'refrigerator': {
+      const doorSplitY1 = h * 0.58; // 冷蔵室と野菜室の境界
+      const doorSplitY2 = h * 0.28; // 野菜室と冷凍室の境界
+      const handleW = 16;
+      const handleD = 20;
+
+      return (
+        <group>
+          {/* 冷蔵庫本体 */}
+          <mesh position={[0, h / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, h, d]} />
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              metalness={0.15}
+              roughness={0.35}
+            />
+          </mesh>
+
+          {/* 前面ドアスリット（溝） */}
+          <mesh position={[0, doorSplitY1, d / 2 + 0.8]}>
+            <boxGeometry args={[w * 0.98, 4, 2]} />
+            <meshStandardMaterial color="#64748b" roughness={0.4} />
+          </mesh>
+          <mesh position={[0, doorSplitY2, d / 2 + 0.8]}>
+            <boxGeometry args={[w * 0.98, 4, 2]} />
+            <meshStandardMaterial color="#64748b" roughness={0.4} />
+          </mesh>
+
+          {/* 上段ドア縦ハンドル */}
+          <mesh
+            position={[w * 0.38, (h + doorSplitY1) / 2, d / 2 + handleD / 2]}
+            castShadow
+          >
+            <boxGeometry args={[handleW, (h - doorSplitY1) * 0.45, handleD]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+          </mesh>
+
+          {/* 中段・下段横ハンドル */}
+          <mesh
+            position={[0, doorSplitY1 - 25, d / 2 + handleD / 2]}
+            castShadow
+          >
+            <boxGeometry args={[w * 0.6, 12, handleD]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+          </mesh>
+          <mesh
+            position={[0, doorSplitY2 - 25, d / 2 + handleD / 2]}
+            castShadow
+          >
+            <boxGeometry args={[w * 0.6, 12, handleD]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+          </mesh>
+
+          {/* 最下部キックプレート（巾木） */}
+          <mesh position={[0, 20, d / 2 + 0.5]}>
+            <boxGeometry args={[w * 0.96, 40, 2]} />
+            <meshStandardMaterial color="#334155" roughness={0.8} />
+          </mesh>
+        </group>
+      );
+    }
+
+    case 'kitchen': {
+      const topT = Math.max(30, h * 0.05);
+      const baseH = h - topT;
+      const sinkW = Math.min(650, w * 0.32);
+      const sinkD = Math.min(500, d * 0.72);
+      const sinkX = -w * 0.28;
+
+      const stoveW = Math.min(600, w * 0.3);
+      const stoveD = Math.min(480, d * 0.7);
+      const stoveX = w * 0.28;
+
+      return (
+        <group>
+          {/* 下部キャビネット本体 */}
+          <mesh position={[0, baseH / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, baseH, d * 0.96]} />
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              roughness={0.5}
+            />
+          </mesh>
+
+          {/* ワークトップ天板（ステンレス/人造大理石） */}
+          <mesh position={[0, baseH + topT / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, topT, d]} />
+            <meshStandardMaterial
+              color="#f8fafc"
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              metalness={0.3}
+              roughness={0.25}
+            />
+          </mesh>
+
+          {/* ステンレスシンク */}
+          <mesh position={[sinkX, h + 1, 0]}>
+            <boxGeometry args={[sinkW, 3, sinkD]} />
+            <meshStandardMaterial color="#94a3b8" metalness={0.85} roughness={0.25} />
+          </mesh>
+          <mesh position={[sinkX, h + 2, 0]}>
+            <boxGeometry args={[sinkW * 0.88, 3, sinkD * 0.85]} />
+            <meshStandardMaterial color="#475569" metalness={0.8} roughness={0.3} />
+          </mesh>
+
+          {/* 水栓（蛇口ポール＋水平ノズル） */}
+          <mesh position={[sinkX, h + 90, -sinkD * 0.42]} castShadow>
+            <cylinderGeometry args={[14, 14, 180, 16]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+          </mesh>
+          <mesh position={[sinkX, h + 170, -sinkD * 0.24]} castShadow>
+            <boxGeometry args={[16, 16, 90]} />
+            <meshStandardMaterial color="#cbd5e1" metalness={0.9} roughness={0.15} />
+          </mesh>
+
+          {/* ガス/IHコンロ（黒色ガラステーブル） */}
+          <mesh position={[stoveX, h + 1.5, 0]}>
+            <boxGeometry args={[stoveW, 3, stoveD]} />
+            <meshStandardMaterial color="#090d16" metalness={0.4} roughness={0.1} />
+          </mesh>
+          {/* コンロの口（五徳・IHリング） */}
+          {[-stoveW * 0.22, stoveW * 0.22].map((bx, idx) => (
+            <mesh key={idx} position={[stoveX + bx, h + 3.5, 0]}>
+              <cylinderGeometry args={[stoveD * 0.26, stoveD * 0.26, 2, 24]} />
+              <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+            </mesh>
+          ))}
+          {/* 奥の小バーナー */}
+          <mesh position={[stoveX, h + 3.5, -stoveD * 0.24]}>
+            <cylinderGeometry args={[stoveD * 0.18, stoveD * 0.18, 2, 20]} />
+            <meshStandardMaterial color="#334155" metalness={0.7} roughness={0.3} />
+          </mesh>
+
+          {/* キャビネット前面の引き出し・扉ラインとハンドル */}
+          {[0.25, 0.55].map((ry, idx) => (
+            <mesh key={idx} position={[0, baseH * ry, d * 0.48 + 1]}>
+              <boxGeometry args={[w * 0.96, 3, 2]} />
+              <meshStandardMaterial color="#475569" roughness={0.5} />
+            </mesh>
+          ))}
+          {[-w * 0.3, 0, w * 0.3].map((hx, idx) => (
+            <mesh key={idx} position={[hx, baseH * 0.75, d * 0.48 + 8]} castShadow>
+              <boxGeometry args={[w * 0.2, 10, 14]} />
+              <meshStandardMaterial color="#94a3b8" metalness={0.8} roughness={0.2} />
+            </mesh>
+          ))}
+        </group>
+      );
+    }
+
+    case 'tv': {
+      const standBaseH = 14;
+      const standBaseW = Math.min(500, w * 0.45);
+      const standBaseD = Math.min(260, d * 0.85);
+
+      const panelH = h * 0.82;
+      const panelT = Math.min(32, d * 0.16);
+      const panelY = h - panelH / 2;
+
+      const standPostH = panelY - standBaseH;
+      const standPostW = Math.min(80, w * 0.12);
+      const standPostD = Math.min(40, d * 0.2);
+
+      return (
+        <group>
+          {/* スタンド台座 */}
+          <mesh position={[0, standBaseH / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[standBaseW, standBaseH, standBaseD]} />
+            <meshStandardMaterial
+              color="#0f172a"
+              metalness={0.7}
+              roughness={0.25}
+            />
+          </mesh>
+
+          {/* スタンド支柱 */}
+          <mesh
+            position={[0, standBaseH + standPostH / 2, -panelT * 0.4]}
+            castShadow
+            receiveShadow
+          >
+            <boxGeometry args={[standPostW, standPostH, standPostD]} />
+            <meshStandardMaterial
+              color="#1e293b"
+              metalness={0.8}
+              roughness={0.2}
+            />
+          </mesh>
+
+          {/* ディスプレイ外枠（ベゼル＋背面） */}
+          <mesh position={[0, panelY, 0]} castShadow receiveShadow>
+            <boxGeometry args={[w, panelH, panelT]} />
+            <meshStandardMaterial
+              color={baseColor}
+              emissive={emissiveColor}
+              emissiveIntensity={emissiveIntensity}
+              metalness={0.5}
+              roughness={0.3}
+            />
+          </mesh>
+
+          {/* 液晶スクリーン（前面） */}
+          <mesh position={[0, panelY, panelT / 2 + 1]}>
+            <boxGeometry args={[w * 0.96, panelH * 0.92, 2]} />
+            <meshStandardMaterial
+              color="#020617"
+              emissive={isSelected ? '#1e3a8a' : '#000000'}
+              emissiveIntensity={isSelected ? 0.3 : 0}
+              metalness={0.8}
+              roughness={0.12}
+            />
+          </mesh>
+
+          {/* 電源ランプ/ロゴ部分 */}
+          <mesh position={[0, panelY - panelH / 2 + 10, panelT / 2 + 2]}>
+            <boxGeometry args={[16, 4, 1]} />
+            <meshStandardMaterial color="#38bdf8" emissive="#38bdf8" emissiveIntensity={0.8} />
+          </mesh>
+        </group>
+      );
+    }
+
     case 'window': {
       const frameT = Math.min(50, w * 0.06, h * 0.06);
       return (

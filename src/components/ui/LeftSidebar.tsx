@@ -1,7 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
+  Armchair,
   Bed,
   Box,
+  CookingPot,
   Copy,
   CornerDownRight,
   DoorOpen,
@@ -10,6 +12,7 @@ import {
   Magnet,
   Maximize2,
   Plus,
+  Refrigerator,
   Trash2,
   Tv,
 } from 'lucide-react';
@@ -61,13 +64,19 @@ export const LeftSidebar: React.FC = () => {
       case 'desk':
         return <Maximize2 className="w-4 h-4 text-amber-400" />;
       case 'chair':
-        return <Tv className="w-4 h-4 text-slate-300" />;
+        return <Armchair className="w-4 h-4 text-indigo-400" />;
       case 'sofa':
         return <Layers className="w-4 h-4 text-emerald-400" />;
       case 'bookshelf':
         return <Box className="w-4 h-4 text-yellow-500" />;
       case 'carpet':
         return <Layers className="w-4 h-4 text-purple-400" />;
+      case 'refrigerator':
+        return <Refrigerator className="w-4 h-4 text-blue-300" />;
+      case 'kitchen':
+        return <CookingPot className="w-4 h-4 text-teal-400" />;
+      case 'tv':
+        return <Tv className="w-4 h-4 text-violet-400" />;
       case 'window':
         return <Maximize2 className="w-4 h-4 text-cyan-400" />;
       case 'door':
