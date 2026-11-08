@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Compass,
@@ -9,6 +9,7 @@ import {
   X,
 } from 'lucide-react';
 import { useRoomStore } from '../../store/useRoomStore';
+import { computeRoomFloorArea } from '../../utils/geometry';
 import { PrintFloorPlan2D } from './PrintFloorPlan2D';
 import { FurnitureSizeTable } from './FurnitureSizeTable';
 
@@ -55,6 +56,7 @@ export const PrintModal: React.FC<Props> = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   const currentNorthDeg = room.northAngleDeg ?? 0;
+  const roomAreaInfo = useMemo(() => computeRoomFloorArea(room.vertices), [room.vertices]);
 
   const handlePrint = () => {
     window.print();
@@ -284,6 +286,9 @@ export const PrintModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 )}
               </div>
               <div className="text-right text-[11px] text-slate-700 leading-snug shrink-0">
+                <div>
+                  床面積: <strong>{roomAreaInfo.formattedAreaM2} m²</strong> (約<strong>{roomAreaInfo.formattedTatami}畳</strong>)
+                </div>
                 <div>
                   天井高: <strong>{room.wallHeight.toLocaleString()} mm</strong> / 壁厚:{' '}
                   <strong>{room.wallThickness} mm</strong>

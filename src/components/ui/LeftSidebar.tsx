@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Armchair,
   Bed,
@@ -9,6 +9,7 @@ import {
   CornerDownRight,
   DoorOpen,
   FolderPlus,
+  Home,
   Layers,
   Magnet,
   Maximize2,
@@ -24,6 +25,7 @@ import { useRoomStore } from '../../store/useRoomStore';
 import { FURNITURE_PRESETS } from '../../constants/presets';
 import { FurniturePresetType } from '../../types/room';
 import { readModelFileAsDataUrl } from '../../utils/fileIo';
+import { computeRoomFloorArea } from '../../utils/geometry';
 import { NumericInput } from './NumericInput';
 
 export const LeftSidebar: React.FC = () => {
@@ -44,6 +46,9 @@ export const LeftSidebar: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'presets' | 'room' | 'list'>('presets');
   const [rectWidth, setRectWidth] = useState(3600);
   const [rectDepth, setRectDepth] = useState(2700);
+
+  // 部屋の床面積・畳数のリアルタイム計算
+  const roomAreaInfo = useMemo(() => computeRoomFloorArea(room.vertices), [room.vertices]);
 
   // モードに応じて適切なタブへ自動連動
   useEffect(() => {
@@ -213,6 +218,28 @@ export const LeftSidebar: React.FC = () => {
 
             {/* 寸法・オプション */}
             <div className="space-y-3 pt-2 border-t border-slate-800">
+              {/* 部屋の床面積・畳数表示 */}
+              <div className="p-2.5 rounded-lg bg-sky-950/40 border border-sky-800/60 text-sky-200 space-y-1">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-sky-300">
+                  <span className="flex items-center gap-1.5">
+                    <Home className="w-3.5 h-3.5 text-sky-400" />
+                    部屋の床面積・畳数
+                  </span>
+                  <span className="text-[10px] text-sky-400/80 font-normal">
+                    (1畳 = 1.62m²)
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-2 pt-0.5">
+                  <span className="text-base font-bold font-mono text-white tracking-tight">
+                    {roomAreaInfo.formattedAreaM2}
+                    <span className="text-xs font-normal text-sky-300 ml-0.5">m²</span>
+                  </span>
+                  <span className="text-xs font-bold text-sky-400">
+                    約 <span className="text-sm font-mono text-white">{roomAreaInfo.formattedTatami}</span> 畳 (帖)
+                  </span>
+                </div>
+              </div>
+
               <div>
                 <label className="text-[10px] text-slate-400 block mb-0.5">天井の高さ</label>
                 <div className="flex items-center bg-slate-800 rounded border border-slate-700 px-2 py-1">

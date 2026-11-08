@@ -9,6 +9,16 @@ import {
 
 const RIGHT_ANGLE_TOLERANCE_DEG = 2.0;
 
+/** 不動産公正取引協議会規格: 1畳 = 1.62m^2 */
+export const TATAMI_SIZE_M2 = 1.62;
+
+export type RoomFloorAreaInfo = {
+  areaM2: number;
+  tatamiCount: number;
+  formattedAreaM2: string;
+  formattedTatami: string;
+};
+
 /**
  * 多角形の符号付き面積を計算する（靴紐の公式）
  */
@@ -21,6 +31,31 @@ export function computeSignedPolygonArea(vertices: Vector2D[]): number {
     area += curr.x * next.z - next.x * curr.z;
   }
   return area / 2;
+}
+
+/**
+ * 部屋の床面積（m^2）および畳数（約○畳）を計算する
+ */
+export function computeRoomFloorArea(vertices: Vector2D[]): RoomFloorAreaInfo {
+  if (vertices.length < 3) {
+    return {
+      areaM2: 0,
+      tatamiCount: 0,
+      formattedAreaM2: '0.00',
+      formattedTatami: '0.0',
+    };
+  }
+
+  const rawAreaMm2 = Math.abs(computeSignedPolygonArea(vertices));
+  const areaM2 = rawAreaMm2 / 1_000_000;
+  const tatamiCount = areaM2 / TATAMI_SIZE_M2;
+
+  return {
+    areaM2: Math.round(areaM2 * 100) / 100,
+    tatamiCount: Math.round(tatamiCount * 10) / 10,
+    formattedAreaM2: areaM2.toFixed(2),
+    formattedTatami: tatamiCount.toFixed(1),
+  };
 }
 
 /**

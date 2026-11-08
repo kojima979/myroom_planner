@@ -226,14 +226,16 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
     // 基準単位 u: 部屋スパンの 1/35（例: 3600mmの部屋なら u ≈ 103mm）
     const u = Math.round(baseSpan / 35);
 
-    // 外側の壁寸法線および寸法ラベルが絶対に見切れないマージンを確保
-    const padX = u * 7.5;
-    const padZ = u * 6.5;
+    // 外側の壁寸法線および寸法ラベルが見切れないマージンを確保
+    // 下側 (padBottom) はスケールバーが他の寸法表記と絶対に重ならないよう独立した安全領域を確保
+    const padX = u * 8.0;
+    const padTop = u * 7.5;
+    const padBottom = u * 11.5;
 
     const minX = rMinX - padX;
     const maxX = rMaxX + padX;
-    const minZ = rMinZ - padZ;
-    const maxZ = rMaxZ + padZ;
+    const minZ = rMinZ - padTop;
+    const maxZ = rMaxZ + padBottom;
 
     return {
       bounds: {
@@ -263,17 +265,135 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
 
   // フォントおよびバッジのサイズ定義（unit基準なので部屋サイズに関わらず常に大きくクッキリ表示される）
   const wallDimFontSize = Math.round(unit * 1.15);
-  const wallDimBoxW = Math.round(unit * 5.8);
-  const wallDimBoxH = Math.round(unit * 1.75);
   const wallDimOffset = Math.round(unit * 3.4);
 
   const clearanceFontSize = Math.round(unit * 0.92);
-  const clearanceBoxW = Math.round(unit * 4.2);
-  const clearanceBoxH = Math.round(unit * 1.4);
 
   const badgeRadius = Math.round(unit * 0.85);
   const badgeFontSize = Math.round(unit * 1.0);
   const furnitureNameFontSize = Math.round(unit * 0.85);
+
+  // 寸法ラベルの重なり検知と自動位置調整（De-collisionアルゴリズム）
+  const adjustedLabels = useMemo(() => {
+    // 1. 各壁一辺の寸法ラベルの初期位置・バウンディングボックス
+    const wallLabels = wallSegments.map((seg) => {
+      const sx = seg.start.x - seg.normal.x * wallDimOffset;
+      const sz = seg.start.z - seg.normal.z * wallDimOffset;
+      const ex = seg.end.x - seg.normal.x * wallDimOffset;
+      const ez = seg.end.z - seg.normal.z * wallDimOffset;
+      const mx = (sx + ex) / 2;
+      const mz = (sz + ez) / 2;
+      const text = `${seg.lengthMm.toLocaleString()} mm`;
+      // 文字数に応じて枠幅を動的に確保（枠線と文字の接触を根絶）
+      const w = Math.max(unit * 5.6, text.length * wallDimFontSize * 0.65 + unit * 1.6);
+      const h = Math.round(wallDimFontSize * 1.7);
+
+      return {
+        id: `wall-${seg.index}`,
+        segIndex: seg.index,
+        x: mx,
+        z: mz,
+        w,
+        h,
+        text,
+        normalX: -seg.normal.x, // 外側法線
+        normalZ: -seg.normal.z,
+        isWall: true,
+      };
+    });
+
+    // 2. 各家具クリアランス寸法ラベルの初期位置・バウンディングボックス
+    const clearanceLabels: Array<{
+      id: string;
+      fId: string;
+      axis: 'horizontal' | 'vertical';
+      x: number;
+      z: number;
+      w: number;
+      h: number;
+      text: string;
+      normalX: number;
+      normalZ: number;
+      isWall: boolean;
+    }> = [];
+
+    furnitureClearances.forEach(({ furniture, horizontal, vertical }) => {
+      [horizontal, vertical].forEach((c) => {
+        if (!c) return;
+        const mx = (c.fromX + c.toX) / 2;
+        const mz = (c.fromZ + c.toZ) / 2;
+        const text = `${c.distanceMm.toLocaleString()}mm`;
+        const w = Math.max(unit * 4.2, text.length * clearanceFontSize * 0.68 + unit * 1.3);
+        const h = Math.round(clearanceFontSize * 1.65);
+        clearanceLabels.push({
+          id: `clr-${furniture.id}-${c.axis}`,
+          fId: furniture.id,
+          axis: c.axis,
+          x: mx,
+          z: mz,
+          w,
+          h,
+          text,
+          normalX: c.axis === 'horizontal' ? 0 : 1,
+          normalZ: c.axis === 'horizontal' ? 1 : 0,
+          isWall: false,
+        });
+      });
+    });
+
+    // 3. ラベル同士の重なり（交差）を判定し、反復計算で安全に押し出す
+    const all = [...wallLabels, ...clearanceLabels];
+    for (let iter = 0; iter < 5; iter++) {
+      let moved = false;
+      for (let i = 0; i < all.length; i++) {
+        for (let j = i + 1; j < all.length; j++) {
+          const a = all[i];
+          const b = all[j];
+          const dx = Math.abs(a.x - b.x);
+          const dz = Math.abs(a.z - b.z);
+          const minW = (a.w + b.w) / 2 + unit * 0.45;
+          const minH = (a.h + b.h) / 2 + unit * 0.45;
+
+          if (dx < minW && dz < minH) {
+            moved = true;
+            const overlapX = minW - dx;
+            const overlapZ = minH - dz;
+
+            if (a.isWall && !b.isWall) {
+              // 壁ラベル a を外側へ、クリアランスラベル b を内側へ押し出す
+              a.x += a.normalX * overlapX * 0.65;
+              a.z += a.normalZ * overlapZ * 0.65;
+              b.x -= a.normalX * overlapX * 0.45;
+              b.z -= a.normalZ * overlapZ * 0.45;
+            } else if (a.isWall && b.isWall) {
+              // 壁同士の重なり（コーナー等）：それぞれの外側法線へ押し出す
+              a.x += a.normalX * Math.max(overlapX, overlapZ) * 0.55;
+              a.z += a.normalZ * Math.max(overlapX, overlapZ) * 0.55;
+              b.x += b.normalX * Math.max(overlapX, overlapZ) * 0.55;
+              b.z += b.normalZ * Math.max(overlapX, overlapZ) * 0.55;
+            } else {
+              // クリアランス同士：互いに離れる方向へずらす
+              const signX = a.x >= b.x ? 1 : -1;
+              const signZ = a.z >= b.z ? 1 : -1;
+              a.x += signX * overlapX * 0.5;
+              a.z += signZ * overlapZ * 0.5;
+              b.x -= signX * overlapX * 0.5;
+              b.z -= signZ * overlapZ * 0.5;
+            }
+          }
+        }
+      }
+      if (!moved) break;
+    }
+
+    const wallMap = new Map<number, { x: number; z: number; w: number; h: number; text: string }>();
+    wallLabels.forEach((l) => wallMap.set(l.segIndex, { x: l.x, z: l.z, w: l.w, h: l.h, text: l.text }));
+
+    const clrMap = new Map<string, { x: number; z: number; w: number; h: number; text: string }>();
+    clearanceLabels.forEach((l) => clrMap.set(l.id, { x: l.x, z: l.z, w: l.w, h: l.h, text: l.text }));
+
+    return { wallMap, clrMap };
+  }, [wallSegments, furnitureClearances, wallDimOffset, wallDimFontSize, clearanceFontSize, unit]);
 
   return (
     <div className="print-svg-wrapper w-full bg-white border border-slate-300 rounded p-2">
@@ -353,7 +473,7 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           strokeLinejoin="round"
         />
 
-        {/* 2. 各壁一辺の寸法線（外側・大文字表記） */}
+        {/* 2. 各壁一辺の寸法線（外側・大文字表記・重なり自動回避） */}
         {wallSegments.map((seg) => {
           const sx = seg.start.x - seg.normal.x * wallDimOffset;
           const sz = seg.start.z - seg.normal.z * wallDimOffset;
@@ -361,6 +481,16 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           const ez = seg.end.z - seg.normal.z * wallDimOffset;
           const mx = (sx + ex) / 2;
           const mz = (sz + ez) / 2;
+
+          const pos = adjustedLabels.wallMap.get(seg.index) ?? {
+            x: mx,
+            z: mz,
+            w: Math.max(unit * 5.6, `${seg.lengthMm} mm`.length * wallDimFontSize * 0.65 + unit * 1.5),
+            h: Math.round(wallDimFontSize * 1.7),
+            text: `${seg.lengthMm.toLocaleString()} mm`,
+          };
+
+          const isShifted = Math.hypot(pos.x - mx, pos.z - mz) > unit * 0.4;
 
           return (
             <g key={`wall-dim-${seg.index}`}>
@@ -394,27 +524,40 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                 markerStart="url(#dim-arrow-start)"
                 markerEnd="url(#dim-arrow-end)"
               />
-              {/* 寸法数値ボックス */}
+              {/* 位置調整時の引き出し補助線 */}
+              {isShifted && (
+                <line
+                  x1={mx}
+                  y1={mz}
+                  x2={pos.x}
+                  y2={pos.z}
+                  stroke="#94a3b8"
+                  strokeWidth={unit * 0.06}
+                  strokeDasharray={`${unit * 0.2},${unit * 0.15}`}
+                />
+              )}
+              {/* 寸法数値ボックス（動的サイズ・完全中央揃え・白抜き背景） */}
               <rect
-                x={mx - wallDimBoxW / 2}
-                y={mz - wallDimBoxH / 2}
-                width={wallDimBoxW}
-                height={wallDimBoxH}
+                x={pos.x - pos.w / 2}
+                y={pos.z - pos.h / 2}
+                width={pos.w}
+                height={pos.h}
                 fill="#ffffff"
                 stroke="#0f172a"
                 strokeWidth={unit * 0.09}
-                rx={unit * 0.2}
+                rx={unit * 0.25}
               />
               <text
-                x={mx}
-                y={mz + wallDimFontSize * 0.36}
+                x={pos.x}
+                y={pos.z}
+                dominantBaseline="central"
+                textAnchor="middle"
                 fill="#0f172a"
                 fontSize={wallDimFontSize}
                 fontWeight="bold"
-                textAnchor="middle"
                 fontFamily="sans-serif"
               >
-                {seg.lengthMm.toLocaleString()} mm
+                {pos.text}
               </text>
             </g>
           );
@@ -602,7 +745,7 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           );
         })}
 
-        {/* 4. 各オブジェクトと壁面までの寸法（1オブジェクトにつき縦方向1つ・横方向1つに限定） */}
+        {/* 4. 各オブジェクトと壁面までの寸法（重なり自動回避・完全中央揃え） */}
         {furnitureClearances.map(({ furniture, horizontal, vertical }) => {
           const lines = [horizontal, vertical].filter(
             (c): c is PlanClearanceLine => c !== null
@@ -613,6 +756,16 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
               {lines.map((c) => {
                 const midX = (c.fromX + c.toX) / 2;
                 const midZ = (c.fromZ + c.toZ) / 2;
+                const labelKey = `clr-${furniture.id}-${c.axis}`;
+                const pos = adjustedLabels.clrMap.get(labelKey) ?? {
+                  x: midX,
+                  z: midZ,
+                  w: Math.max(unit * 4.2, `${c.distanceMm}mm`.length * clearanceFontSize * 0.68 + unit * 1.3),
+                  h: Math.round(clearanceFontSize * 1.65),
+                  text: `${c.distanceMm.toLocaleString()}mm`,
+                };
+
+                const isShifted = Math.hypot(pos.x - midX, pos.z - midZ) > unit * 0.4;
 
                 return (
                   <g key={`${furniture.id}-${c.axis}`}>
@@ -627,26 +780,38 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                       markerStart="url(#clearance-arrow-start)"
                       markerEnd="url(#clearance-arrow-end)"
                     />
+                    {isShifted && (
+                      <line
+                        x1={midX}
+                        y1={midZ}
+                        x2={pos.x}
+                        y2={pos.z}
+                        stroke="#7dd3fc"
+                        strokeWidth={unit * 0.05}
+                        strokeDasharray={`${unit * 0.2},${unit * 0.15}`}
+                      />
+                    )}
                     <rect
-                      x={midX - clearanceBoxW / 2}
-                      y={midZ - clearanceBoxH / 2}
-                      width={clearanceBoxW}
-                      height={clearanceBoxH}
+                      x={pos.x - pos.w / 2}
+                      y={pos.z - pos.h / 2}
+                      width={pos.w}
+                      height={pos.h}
                       fill="#f0f9ff"
                       stroke="#0369a1"
-                      strokeWidth={unit * 0.07}
-                      rx={unit * 0.15}
+                      strokeWidth={unit * 0.08}
+                      rx={unit * 0.2}
                     />
                     <text
-                      x={midX}
-                      y={midZ + clearanceFontSize * 0.36}
+                      x={pos.x}
+                      y={pos.z}
+                      dominantBaseline="central"
+                      textAnchor="middle"
                       fill="#0c4a6e"
                       fontSize={clearanceFontSize}
                       fontWeight="bold"
-                      textAnchor="middle"
                       fontFamily="sans-serif"
                     >
-                      {c.distanceMm.toLocaleString()}mm
+                      {pos.text}
                     </text>
                   </g>
                 );
@@ -868,21 +1033,22 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           const totalScaleMm = bounds.w > 5000 ? 2000 : 1000;
           const halfScaleMm = totalScaleMm / 2;
           const barHeight = Math.max(unit * 0.28, 12);
-          const barOriginX = bounds.minX + unit * 2.8;
-          const barOriginZ = bounds.maxZ - unit * 2.2;
+          // 下壁の寸法線から十分に離れた下部専用余白帯に配置
+          const barOriginX = bounds.minX + unit * 3.0;
+          const barOriginZ = bounds.maxZ - unit * 2.5;
 
           return (
             <g transform={`translate(${barOriginX}, ${barOriginZ})`}>
               {/* スケールバー背景プレート */}
               <rect
-                x={-unit * 0.5}
-                y={-unit * 1.5}
-                width={totalScaleMm + unit * 1.0}
-                height={unit * 2.5}
+                x={-unit * 0.8}
+                y={-unit * 1.4}
+                width={totalScaleMm + unit * 1.6}
+                height={barHeight + unit * 2.5}
                 fill="#ffffff"
                 stroke="#cbd5e1"
                 strokeWidth={unit * 0.05}
-                rx={unit * 0.15}
+                rx={unit * 0.25}
               />
 
               {/* 第1区間 (0 〜 halfScaleMm): 黒塗り */}
@@ -912,36 +1078,39 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
               <line x1={halfScaleMm} y1={-unit * 0.25} x2={halfScaleMm} y2={barHeight} stroke="#0f172a" strokeWidth={unit * 0.06} />
               <line x1={totalScaleMm} y1={-unit * 0.25} x2={totalScaleMm} y2={barHeight} stroke="#0f172a" strokeWidth={unit * 0.06} />
 
-              {/* 目盛り数値ラベル */}
+              {/* 目盛り数値ラベル（完全センタリング） */}
               <text
                 x={0}
-                y={-unit * 0.4}
+                y={-unit * 0.55}
+                dominantBaseline="central"
+                textAnchor="middle"
                 fill="#0f172a"
                 fontSize={unit * 0.65}
                 fontWeight="bold"
-                textAnchor="middle"
                 fontFamily="sans-serif"
               >
                 0
               </text>
               <text
                 x={halfScaleMm}
-                y={-unit * 0.4}
+                y={-unit * 0.55}
+                dominantBaseline="central"
+                textAnchor="middle"
                 fill="#0f172a"
                 fontSize={unit * 0.65}
                 fontWeight="bold"
-                textAnchor="middle"
                 fontFamily="sans-serif"
               >
                 {halfScaleMm.toLocaleString()}
               </text>
               <text
                 x={totalScaleMm}
-                y={-unit * 0.4}
+                y={-unit * 0.55}
+                dominantBaseline="central"
+                textAnchor="middle"
                 fill="#0f172a"
                 fontSize={unit * 0.65}
                 fontWeight="bold"
-                textAnchor="middle"
                 fontFamily="sans-serif"
               >
                 {totalScaleMm.toLocaleString()} mm ({totalScaleMm / 1000}m)
@@ -950,12 +1119,13 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
               {/* スケールバーのキャプション */}
               <text
                 x={totalScaleMm / 2}
-                y={barHeight + unit * 0.68}
+                y={barHeight + unit * 0.65}
+                dominantBaseline="central"
+                textAnchor="middle"
                 fill="#64748b"
                 fontSize={unit * 0.55}
                 fontWeight="bold"
                 letterSpacing="0.05em"
-                textAnchor="middle"
                 fontFamily="sans-serif"
               >
                 SCALE BAR (実寸mm)
