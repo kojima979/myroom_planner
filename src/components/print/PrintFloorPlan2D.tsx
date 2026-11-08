@@ -575,6 +575,9 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
           const isTv = f.presetType === 'tv';
           const isChair = f.presetType === 'chair';
           const isBeanTable = f.presetType === 'bean_table';
+          const isRoundTable = f.presetType === 'round_table';
+          const isLowTable = f.presetType === 'low_table';
+          const isPlant = f.presetType === 'plant';
 
           const transform = `translate(${f.position.x}, ${f.position.z}) rotate(${f.rotation.y})`;
 
@@ -612,6 +615,75 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                     />
                   ))}
                 </>
+              ) : isRoundTable ? (
+                <>
+                  {/* 丸型テーブル天板 */}
+                  <ellipse
+                    cx={0}
+                    cy={0}
+                    rx={hw}
+                    ry={hd}
+                    fill="#ffffff"
+                    stroke="#0f172a"
+                    strokeWidth={unit * 0.16}
+                  />
+                  {/* 4本の丸脚位置 */}
+                  {[
+                    [-hw * 0.48, -hd * 0.48],
+                    [hw * 0.48, -hd * 0.48],
+                    [-hw * 0.48, hd * 0.48],
+                    [hw * 0.48, hd * 0.48],
+                  ].map(([lx, ly], idx) => (
+                    <circle
+                      key={idx}
+                      cx={lx}
+                      cy={ly}
+                      r={Math.min(unit * 0.14, 16)}
+                      fill="#e2e8f0"
+                      stroke="#64748b"
+                      strokeWidth={unit * 0.08}
+                    />
+                  ))}
+                </>
+              ) : isPlant ? (
+                <>
+                  {/* 観葉植物の外周フォリッジ */}
+                  <circle
+                    cx={0}
+                    cy={0}
+                    r={Math.min(hw, hd) * 0.92}
+                    fill="#f0fdf4"
+                    stroke="#16a34a"
+                    strokeWidth={unit * 0.14}
+                    strokeDasharray={`${unit * 0.3},${unit * 0.15}`}
+                  />
+                  {/* 陶器鉢（ポット） */}
+                  <circle
+                    cx={0}
+                    cy={0}
+                    r={Math.min(hw, hd) * 0.42}
+                    fill="#ffffff"
+                    stroke="#334155"
+                    strokeWidth={unit * 0.12}
+                  />
+                  {/* 幹と葉の枝ぶり線 */}
+                  <line
+                    x1={-Math.min(hw, hd) * 0.65}
+                    y1={0}
+                    x2={Math.min(hw, hd) * 0.65}
+                    y2={0}
+                    stroke="#16a34a"
+                    strokeWidth={unit * 0.08}
+                  />
+                  <line
+                    x1={0}
+                    y1={-Math.min(hw, hd) * 0.65}
+                    x2={0}
+                    y2={Math.min(hw, hd) * 0.65}
+                    stroke="#16a34a"
+                    strokeWidth={unit * 0.08}
+                  />
+                </>
               ) : (
                 <rect
                   x={-hw}
@@ -623,6 +695,21 @@ export const PrintFloorPlan2D: React.FC<Props> = ({
                   strokeWidth={isCarpet ? unit * 0.1 : unit * 0.16}
                   strokeDasharray={isCarpet ? `${unit * 0.4},${unit * 0.25}` : undefined}
                   rx={unit * 0.12}
+                />
+              )}
+
+              {/* ローテーブルの中棚表示 */}
+              {isLowTable && (
+                <rect
+                  x={-hw * 0.82}
+                  y={-hd * 0.72}
+                  width={hw * 1.64}
+                  height={hd * 1.44}
+                  fill="none"
+                  stroke="#64748b"
+                  strokeWidth={unit * 0.08}
+                  strokeDasharray={`${unit * 0.25},${unit * 0.15}`}
+                  rx={unit * 0.06}
                 />
               )}
 
