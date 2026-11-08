@@ -4,6 +4,9 @@
 
 検討したレイアウトは、施工・家具購入・搬入計画の記録用として、**クッキリと見やすい2D平面図（寸法入り）と配置家具のサイズ一覧表**を印刷・PDF出力することができます。
 
+🌐 **オンライン公開URL (GitHub Pages)**:  
+👉 **[https://kojima979.github.io/myroom_planner/](https://kojima979.github.io/myroom_planner/)**
+
 ---
 
 ## 主な機能
