@@ -16,7 +16,23 @@ const SingleFurnitureNode: React.FC<{
   isColliding: boolean;
   warningDurationSec: number;
 }> = ({ item, isSelected, isColliding, warningDurationSec }) => {
-  const groupRef = useRef<THREE.Group>(null);
+  const [targetGroup, setTargetGroup] = useState<THREE.Group | null>(null);
+  const groupRef = useRef<THREE.Group | null>(null);
+
+  // マウント時にグループノードを state に保持することで、配置直後（初回レンダリング時）から即座にギズモを表示・移動可能にする
+  const handleGroupRef = (node: THREE.Group | null) => {
+    groupRef.current = node;
+    if (node && node !== targetGroup) {
+      setTargetGroup(node);
+    }
+  };
+
+  useEffect(() => {
+    if (groupRef.current && groupRef.current !== targetGroup) {
+      setTargetGroup(groupRef.current);
+    }
+  });
+
   const editorMode = useRoomStore((s) => s.editorMode);
   const gizmoMode = useRoomStore((s) => s.gizmoMode);
   const selectFurniture = useRoomStore((s) => s.selectFurniture);
@@ -84,7 +100,7 @@ const SingleFurnitureNode: React.FC<{
   return (
     <>
       <group
-        ref={groupRef}
+        ref={handleGroupRef}
         position={[item.position.x, item.position.y, item.position.z]}
         rotation={eulerRad}
         onClick={handleClick}
@@ -126,18 +142,19 @@ const SingleFurnitureNode: React.FC<{
         )}
       </group>
 
-      {/* 選択中の家具に対する3D移動・回転ギズモ */}
-      {isSelected && editorMode === 'furniture' && !item.locked && groupRef.current && (
+      {/* 選択中の家具に対する3D移動・回転ギズモ（配置直後から即座に表示） */}
+      {isSelected && editorMode === 'furniture' && !item.locked && (targetGroup || groupRef.current) && (
         <TransformControls
-          object={groupRef.current}
+          object={(targetGroup || groupRef.current) as THREE.Group}
           mode={gizmoMode}
           size={0.85}
           onMouseDown={() => setIsDraggingGizmo(true)}
           onMouseUp={() => setIsDraggingGizmo(false)}
           onObjectChange={() => {
-            if (!groupRef.current) return;
+            const currentObj = targetGroup || groupRef.current;
+            if (!currentObj) return;
             if (gizmoMode === 'translate') {
-              const pos = groupRef.current.position;
+              const pos = currentObj.position;
               const clampedY = Math.max(0, Math.round(pos.y / 10) * 10);
               pos.y = clampedY;
               updateFurniturePosition(item.id, {
@@ -146,7 +163,7 @@ const SingleFurnitureNode: React.FC<{
                 z: Math.round(pos.z / 10) * 10,
               });
             } else if (gizmoMode === 'rotate') {
-              const rot = groupRef.current.rotation;
+              const rot = currentObj.rotation;
               const degY = Math.round(((rot.y * 180) / Math.PI) * 2) / 2;
               updateFurnitureRotation(item.id, {
                 x: 0,
